@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FinPilot AI — Premium AI Personal Finance Mobile Experience</title>
+  <meta name="description" content="Next-generation Apple-inspired AI Personal Finance Agent with glassmorphism, dark mode, glowing AI assistant, and predictive budgeting.">
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Design Tokens & Glassmorphic Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Ambient Liquid Canvas Background -->
+  <canvas id="ambient-bg-canvas"></canvas>
+
+  <!-- Floating Toast Notification System -->
+  <div id="app-floating-toast" class="floating-toast">
+    <div id="toast-icon-wrap" style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16,185,129,0.2); display: flex; align-items: center; justify-content: center; color: #10B981; font-size: 13px;">
+      <i class="fas fa-check"></i>
+    </div>
+    <div style="flex: 1;">
+      <div id="toast-title" style="font-size: 12px; font-weight: 700; color: #FFFFFF;">Success</div>
+      <div id="toast-msg" style="font-size: 10px; color: var(--text-muted);">Operation completed successfully.</div>
+    </div>
+  </div>
+
+  <!-- Studio Presentation Layout -->
+  <div class="studio-layout">
+    
+    <!-- Top Showcase Control Bar -->
+    <header class="studio-bar">
+      <div class="studio-logo">
+        <div class="logo-orb">
+          <i class="fas fa-bolt" style="color: #FFFFFF; font-size: 16px;"></i>
+        </div>
+        <div class="studio-brand-text">
+          <h1>FinPilot AI</h1>
+          <span>Autonomous Personal Finance Companion</span>
+        </div>
+      </div>
+
+      <!-- Quick Screen Switcher for Presentation & Interactive Testing -->
+      <div class="studio-controls">
+        <div class="control-pill-group">
+          <button class="control-btn active" data-screen="home" onclick="FinApp.showScreen('home')">
+            <i class="fas fa-house"></i> Home
+          </button>
+          <button class="control-btn" data-screen="transactions" onclick="FinApp.showScreen('transactions')">
+            <i class="fas fa-list-check"></i> Transactions
+          </button>
+          <button class="control-btn" data-screen="ai" onclick="FinApp.showScreen('ai')">
+            <i class="fas fa-brain-circuit"></i> AI Assistant
+          </button>
+          <button class="control-btn" data-screen="analytics" onclick="FinApp.showScreen('analytics')">
+            <i class="fas fa-chart-pie"></i> Analytics
+          </button>
+          <button class="control-btn" data-screen="budget" onclick="FinApp.showScreen('budget')">
+            <i class="fas fa-wallet"></i> Budget
+          </button>
+          <button class="control-btn" data-screen="reports" onclick="FinApp.showScreen('reports')">
+            <i class="fas fa-file-invoice-dollar"></i> Reports
+          </button>
+          <button class="control-btn" data-screen="search" onclick="FinApp.showScreen('search')">
+            <i class="fas fa-search"></i> Search
+          </button>
+          <button class="control-btn" data-screen="notifications" onclick="FinApp.showScreen('notifications')">
+            <i class="fas fa-bell"></i> Alerts
+          </button>
+          <button class="control-btn" data-screen="profile" onclick="FinApp.showScreen('profile')">
+            <i class="fas fa-user-gear"></i> Profile
+          </button>
+          <button class="control-btn" data-screen="settings" onclick="FinApp.showScreen('settings')">
+            <i class="fas fa-sliders"></i> Settings
+          </button>
+          <button class="control-btn" data-screen="login" onclick="FinApp.showScreen('login')">
+            <i class="fas fa-key"></i> Login
+          </button>
+        </div>
+
+        <!-- Device Mode Switcher (iPhone 16 Pro / Pixel 9 Pro / Studio Fullscreen) -->
+        <div class="control-pill-group">
+          <button class="control-btn active" data-device="iphone" onclick="FinApp.setDeviceMode('iphone')">
+            <i class="fab fa-apple"></i> iPhone 16 Pro
+          </button>
+          <button class="control-btn" data-device="pixel" onclick="FinApp.setDeviceMode('pixel')">
+            <i class="fab fa-android"></i> Pixel 9 Pro
+          </button>
+          <button class="control-btn" data-device="fullscreen" onclick="FinApp.setDeviceMode('fullscreen')">
+            <i class="fas fa-expand"></i> Studio View
+          </button>
+        </div>
+
+        <!-- Audio SFX Toggle -->
+        <button id="btn-toggle-audio" class="quick-action-pill active" onclick="FinApp.toggleAudio()">
+          <i class="fas fa-volume-high"></i> SFX On
+        </button>
+      </div>
+    </header>
+
+    <!-- Interactive Mobile Mockup Container -->
+    <main class="mockup-container">
+      <div id="main-device-phone" class="device-phone mode-iphone">
+
+        <!-- Dynamic Island (iOS iPhone 16 Pro) -->
+        <div class="dynamic-island-wrapper">
+          <div id="dynamic-island" class="dynamic-island" onclick="FinApp.toggleDynamicIsland()">
+            <div class="island-camera-lens"></div>
+            <div class="island-compact-content" style="display: flex; align-items: center; gap: 8px;">
+              <span class="island-ai-glow"></span>
+              <span style="font-size: 10px; font-weight: 700; color: #5DA9FF;">AI Active</span>
+            </div>
+            <div class="island-expanded-content">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #7C5CFF, #9F6EFF); display: flex; align-items: center; justify-content: center; font-size: 12px;">
+                  <i class="fas fa-sparkles"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; font-weight: 700; color: #FFFFFF;">FinPilot Autonomous Guard</div>
+                  <div style="font-size: 9px; color: #10B981;">+$8,999.25 Projected Surplus</div>
+                </div>
+              </div>
+              <button onclick="FinApp.showScreen('ai')" style="background: rgba(124,92,255,0.3); border: 1px solid rgba(124,92,255,0.6); color: #FFF; font-size: 9px; font-weight: 700; padding: 4px 10px; border-radius: 12px; cursor: pointer;">
+                Chat AI
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Android Pixel 9 Camera Punch Hole -->
+        <div class="pixel-camera-punch"></div>
+
+        <!-- Mobile Phone Status Bar -->
+        <div class="phone-status-bar">
+          <span class="status-time" id="device-clock">09:41</span>
+          <div class="status-icons">
+            <i class="fas fa-signal"></i>
+            <i class="fas fa-wifi"></i>
+            <i class="fas fa-battery-full" style="color: #10B981;"></i>
+          </div>
+        </div>
+
+        <!-- Phone Screen Viewport (Scrollable) -->
+        <div class="phone-viewport">
+
+          <!-- =========================================================================
+               1. SPLASH SCREEN
+               ========================================================================= -->
+          <section id="splash-screen" class="screen-splash">
+            <div class="splash-logo-container">
+              <div class="splash-pulsing-rings"></div>
+              <div class="splash-pulsing-rings"></div>
+              <div class="splash-main-orb">
+                <i class="fas fa-feather-pointed" style="color: #FFFFFF; font-size: 38px;"></i>
+              </div>
+            </div>
+            <h2 class="splash-title">FinPilot AI</h2>
+            <p class="splash-tagline">"Your Intelligent Money Companion"</p>
+            <div class="splash-loader-bar">
+              <div class="splash-loader-fill"></div>
+            </div>
+            <button onclick="FinApp.dismissSplash()" class="btn-glow-primary" style="margin-top: 26px; max-width: 200px;">
+              Enter Dashboard →
+            </button>
+          </section>
+
+          <!-- =========================================================================
+               2. LOGIN SCREEN
+               ========================================================================= -->
+          <section id="screen-login" class="app-screen">
+            <div style="text-align: center; margin: 24px 0 20px;">
+              <div class="logo-orb" style="width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 18px;">
+                <i class="fas fa-fingerprint" style="font-size: 24px; color: #FFFFFF;"></i>
+              </div>
+              <h2 style="font-family: var(--font-heading); font-size: 22px; font-weight: 800;">Welcome to FinPilot</h2>
+              <p style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Sign in securely with biometric Face ID or connected keys</p>
+            </div>
+
+            <!-- Social & Email Login Cards -->
+            <div class="glass-card" style="margin-bottom: 12px;">
+              <button onclick="FinApp.handleLogin('Apple')" class="quick-action-pill" style="width: 100%; justify-content: center; height: 44px; margin-bottom: 10px; background: rgba(255,255,255,0.12);">
+                <i class="fab fa-apple" style="font-size: 16px;"></i> Continue with Apple
+              </button>
+              <button onclick="FinApp.handleLogin('Google')" class="quick-action-pill" style="width: 100%; justify-content: center; height: 44px; margin-bottom: 10px;">
+                <i class="fab fa-google" style="color: #5DA9FF;"></i> Continue with Google
+              </button>
+              <button onclick="FinApp.handleLogin('Phone')" class="quick-action-pill" style="width: 100%; justify-content: center; height: 44px; margin-bottom: 10px;">
+                <i class="fas fa-phone"></i> Phone Number OTP
+              </button>
+              <button onclick="FinApp.handleLogin('Email')" class="quick-action-pill" style="width: 100%; justify-content: center; height: 44px;">
+                <i class="fas fa-envelope"></i> Email & Password
+              </button>
+            </div>
+
+            <!-- Biometric Face ID Scanner Simulator -->
+            <div class="glass-card" style="text-align: center; padding: 20px 16px;">
+              <div onclick="FinApp.simulateFaceIdLogin()" style="width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle, rgba(124,92,255,0.35) 0%, transparent 70%); border: 2px solid rgba(124,92,255,0.6); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; cursor: pointer;">
+                <i class="fas fa-face-viewfinder" style="font-size: 26px; color: #7C5CFF;"></i>
+              </div>
+              <div style="font-size: 12px; font-weight: 700; color: #FFFFFF;">Biometric Face ID</div>
+              <p style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">Tap scanner to authenticate with Apple Secure Enclave</p>
+            </div>
+
+            <button class="btn-glow-primary" onclick="FinApp.showScreen('home')">
+              <i class="fas fa-shield-halved"></i> Access Financial Vault
+            </button>
+          </section>
+
+          <!-- =========================================================================
+               3. HOME DASHBOARD SCREEN (Default Active)
+               ========================================================================= -->
+          <section id="screen-home" class="app-screen active">
+            
+            <!-- Header: Profile, Greeting, Notification, Search -->
+            <div class="app-header">
+              <div class="user-profile-meta" onclick="FinApp.showScreen('profile')" style="cursor: pointer;">
+                <div class="user-avatar-wrap">
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80" class="user-avatar" alt="Alex Morgan">
+                  <span class="avatar-online-badge"></span>
+                </div>
+                <div>
+                  <div class="greeting-text">Good evening,</div>
+                  <div class="user-name-title">
+                    Alex Morgan
+                    <span class="user-badge-vip">Ultra</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="header-actions">
+                <button class="icon-btn-glass" onclick="FinApp.showScreen('search')" title="Global Search">
+                  <i class="fas fa-search"></i>
+                </button>
+                <button class="icon-btn-glass" onclick="FinApp.openModal('modal-scan-qr')" title="Scan QR Code">
+                  <i class="fas fa-qrcode"></i>
+                </button>
+                <button class="icon-btn-glass" onclick="FinApp.showScreen('notifications')" title="Notifications">
+                  <i class="fas fa-bell"></i>
+                  <span class="notification-badge"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Main Hero Balance Glass Card -->
+            <div class="hero-balance-card">
+              <div class="balance-top-row">
+                <div class="balance-label-pill">
+                  <i class="fas fa-vault" style="color: #7C5CFF;"></i> Current Balance
+                </div>
+                <button class="balance-toggle-eye" onclick="FinApp.toggleBalance()" title="Hide / Show Balance">
+                  <i id="balance-eye-icon" class="fas fa-eye"></i>
+                </button>
+              </div>
+
+              <div class="balance-amount-display">
+                <span class="balance-currency">$</span>
+                <span id="hero-balance-val" class="balance-val">48,920.50</span>
+              </div>
+
+              <div class="balance-growth-tag">
+                <i class="fas fa-arrow-trend-up"></i> +14.2% vs last month
+              </div>
+
+              <div class="balance-stats-row">
+                <div class="stat-item">
+                  <span class="stat-title">Income</span>
+                  <span class="stat-num income">+$12,450</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-title">Expenses</span>
+                  <span class="stat-num spending">-$3,450</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-title">Savings</span>
+                  <span class="stat-num savings">$8,999</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Actions Grid -->
+            <div class="quick-actions-grid">
+              <div class="quick-action-card" onclick="FinApp.openModal('modal-scan-qr')">
+                <div class="action-icon-circle qr">
+                  <i class="fas fa-qrcode"></i>
+                </div>
+                <span class="action-card-label">Scan QR</span>
+              </div>
+
+              <div class="quick-action-card" onclick="FinApp.showScreen('budget')">
+                <div class="action-icon-circle budget">
+                  <i class="fas fa-chart-pie"></i>
+                </div>
+                <span class="action-card-label">Budget</span>
+              </div>
+
+              <div class="quick-action-card" onclick="FinApp.showScreen('reports')">
+                <div class="action-icon-circle reports">
+                  <i class="fas fa-file-invoice"></i>
+                </div>
+                <span class="action-card-label">Reports</span>
+              </div>
+
+              <div class="quick-action-card" onclick="FinApp.showScreen('ai')">
+                <div class="action-icon-circle send">
+                  <i class="fas fa-brain-circuit"></i>
+                </div>
+                <span class="action-card-label">AI Assistant</span>
+              </div>
+            </div>
+
+            <!-- Spending Summary Strip (Today, Week, Month, Upcoming Bills) -->
+            <div class="spending-summary-strip">
+              <div class="spend-mini-card">
+                <span class="spend-mini-label">Today's Spend</span>
+                <span class="spend-mini-val">$142.50</span>
+                <span class="spend-mini-sub">● 3 debits</span>
+              </div>
+              <div class="spend-mini-card">
+                <span class="spend-mini-label">This Week</span>
+                <span class="spend-mini-val">$1,280.00</span>
+                <span class="spend-mini-sub">● On pace</span>
+              </div>
+              <div class="spend-mini-card">
+                <span class="spend-mini-label">This Month</span>
+                <span class="spend-mini-val">$3,450.75</span>
+                <span class="spend-mini-sub">● 69% of cap</span>
+              </div>
+              <div class="spend-mini-card" onclick="FinApp.showScreen('budget')" style="cursor: pointer;">
+                <span class="spend-mini-label">Upcoming Bills</span>
+                <span class="spend-mini-val">5 Bills</span>
+                <span class="spend-mini-sub" style="color: #5DA9FF;">$358.90 due</span>
+              </div>
+            </div>
+
+            <!-- Animated Spending Chart Section -->
+            <div class="glass-card">
+              <div class="section-header">
+                <h3 class="section-title">
+                  <i class="fas fa-chart-mixed" style="color: #7C5CFF;"></i> Spending & Category Flow
+                </h3>
+                <button class="section-action-link" onclick="FinApp.showScreen('analytics')">
+                  Analytics <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+
+              <!-- Switchable Chart Navigation (Donut, Weekly, Monthly) -->
+              <div class="chart-tabs-nav">
+                <button class="chart-tab-btn active" onclick="FinApp.switchHomeChart(this, 'donut')">
+                  Circular Donut
+                </button>
+                <button class="chart-tab-btn" onclick="FinApp.switchHomeChart(this, 'weekly')">
+                  Weekly Bars
+                </button>
+                <button class="chart-tab-btn" onclick="FinApp.switchHomeChart(this, 'monthly')">
+                  Monthly Area
+                </button>
+              </div>
+
+              <!-- Chart Mount Container -->
+              <div id="home-chart-display" style="min-height: 210px; display: flex; align-items: center; justify-content: center;">
+                <!-- Rendered dynamically by charts.js -->
+              </div>
+            </div>
+
+            <!-- Recent Transactions Section -->
+            <div class="section-header" style="margin-top: 18px;">
+              <h3 class="section-title">
+                <i class="fas fa-clock-rotate-left" style="color: #5DA9FF;"></i> Recent Transactions
+              </h3>
+              <button class="section-action-link" onclick="FinApp.showScreen('transactions')">
+                View All <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+
+            <div id="home-recent-transactions" class="transaction-list">
+              <!-- Rendered via JS -->
+            </div>
+
+          </section>
+
+          <!-- =========================================================================
+               4. TRANSACTIONS SCREEN
+               ========================================================================= -->
+          <section id="screen-transactions" class="app-screen">
+            <div class="section-header">
+              <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 800;">Transactions Activity</h2>
+              <div style="display: flex; gap: 8px;">
+                <button class="icon-btn-glass" onclick="FinApp.openModal('modal-add-tx')" title="Add Transaction">
+                  <i class="fas fa-plus"></i>
+                </button>
+                <button class="icon-btn-glass" onclick="FinApp.openModal('modal-filter')" title="Filter">
+                  <i class="fas fa-sliders"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="glass-card glass-card-sm" style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 10px 14px;">
+              <i class="fas fa-search" style="color: var(--text-muted);"></i>
+              <input type="text" placeholder="Search merchant, category, or UPI ID..." oninput="FinApp.handleSearch(this.value)" style="background: transparent; border: none; outline: none; color: #FFFFFF; font-size: 13px; width: 100%;">
+            </div>
+
+            <!-- Filter Chips (All, UPI, Cards, Bank, Wallet) -->
+            <div class="filter-pills-row">
+              <button class="filter-pill active" data-method="All" onclick="FinApp.filterTransactions('All')">All</button>
+              <button class="filter-pill" data-method="UPI" onclick="FinApp.filterTransactions('UPI')">UPI / FastPay</button>
+              <button class="filter-pill" data-method="Card" onclick="FinApp.filterTransactions('Card')">Apple Card & Visa</button>
+              <button class="filter-pill" data-method="Wallet" onclick="FinApp.filterTransactions('Wallet')">FinPilot Wallet</button>
+              <button class="filter-pill" data-method="Bank" onclick="FinApp.filterTransactions('Bank')">Bank Direct</button>
+            </div>
+
+            <!-- Full Transaction List -->
+            <div id="full-transactions-list" class="transaction-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </section>
+
+          <!-- =========================================================================
+               5. AI ASSISTANT SCREEN
+               ========================================================================= -->
+          <section id="screen-ai" class="app-screen">
+            
+            <!-- Large Holographic AI Assistant Avatar -->
+            <div class="ai-avatar-hero">
+              <div class="ai-sphere-stage">
+                <div class="ai-outer-glow-ring"></div>
+                <div class="ai-orbit-ring"></div>
+                <div class="ai-core-sphere">
+                  <i class="fas fa-brain-circuit" style="font-size: 32px; color: #FFFFFF; filter: drop-shadow(0 0 10px rgba(255,255,255,0.8));"></i>
+                </div>
+              </div>
+              <div class="ai-assistant-headline">
+                <h2>FinPilot Neural Assistant</h2>
+                <p>Autonomous Financial Copilot • GPT-4.5 Ultra Finance Model</p>
+              </div>
+            </div>
+
+            <!-- Suggested 1-Tap Queries -->
+            <div id="ai-chips-list" class="ai-suggested-prompts">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- AI Recommendation Cards (Savings Tips, Budget Warning, Subscription Detection) -->
+            <div id="ai-recommendations-feed">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Glass Chat Interface Stream -->
+            <div id="ai-chat-stream" class="ai-chat-stream">
+              <div class="chat-bubble ai">
+                <div class="ai-chat-meta-badge"><i class="fas fa-sparkles"></i> FinPilot Intelligence</div>
+                Hello Alex! I’ve analyzed your finances across 4 accounts:
+                <br>• Your monthly cash inflow is <strong>+$12,450.00</strong>
+                <br>• Current burn rate is only <strong>27.7%</strong> (Super healthy!)
+                <br>• You have <strong>$8,999.25</strong> in new savings ready for auto-allocation.
+                <br><br>How can I assist your wealth strategy today?
+              </div>
+            </div>
+
+            <!-- AI Chat Input Bar & Voice Button -->
+            <form onsubmit="FinApp.handleAiSubmit(event)" class="ai-input-bar">
+              <button type="button" class="voice-mic-btn" onclick="FinApp.openModal('modal-voice-assistant')" title="Voice Mode">
+                <i class="fas fa-microphone"></i>
+              </button>
+              <input type="text" id="ai-user-input" class="ai-input-field" placeholder="Ask FinPilot anything about your money...">
+              <button type="submit" class="ai-send-btn" title="Send">
+                <i class="fas fa-arrow-up"></i>
+              </button>
+            </form>
+
+          </section>
+
+          <!-- =========================================================================
+               6. ANALYTICS SCREEN
+               ========================================================================= -->
+          <section id="screen-analytics" class="app-screen">
+            <div class="section-header">
+              <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 800;">Analytics & Cashflow</h2>
+              <div style="font-size: 11px; color: var(--text-muted);">August 2026</div>
+            </div>
+
+            <!-- Interactive Large Chart Canvas Card -->
+            <div class="glass-card">
+              <div class="chart-tabs-nav">
+                <button class="chart-tab-btn active" onclick="FinApp.switchAnalyticsChart(this, 'line')">
+                  Income vs Spend
+                </button>
+                <button class="chart-tab-btn" onclick="FinApp.switchAnalyticsChart(this, 'bar')">
+                  Weekly Velocity
+                </button>
+                <button class="chart-tab-btn" onclick="FinApp.switchAnalyticsChart(this, 'donut')">
+                  Category Donut
+                </button>
+              </div>
+              <div id="analytics-chart-canvas" style="min-height: 180px;"></div>
+            </div>
+
+            <!-- 30-Day Heatmap Calendar -->
+            <div class="glass-card">
+              <div class="section-header" style="margin-bottom: 8px;">
+                <h3 class="section-title">
+                  <i class="fas fa-calendar-days" style="color: #7C5CFF;"></i> 30-Day Spending Heatmap
+                </h3>
+                <span style="font-size: 10px; color: var(--text-muted);">Daily Intensity</span>
+              </div>
+              <div id="heatmap-calendar-mount">
+                <!-- Rendered by charts.js -->
+              </div>
+            </div>
+
+            <!-- Category Spending Breakdown Progress -->
+            <div class="glass-card">
+              <h3 class="section-title" style="margin-bottom: 14px;">
+                <i class="fas fa-layer-group" style="color: #7C5CFF;"></i> Category Breakdown
+              </h3>
+              <div id="analytics-category-list">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <!-- Top Merchants Leaderboard -->
+            <div class="glass-card">
+              <h3 class="section-title" style="margin-bottom: 12px;">
+                <i class="fas fa-crown" style="color: #F59E0B;"></i> Top Merchants Leaderboard
+              </h3>
+              <div id="top-merchants-leaderboard">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <!-- Month over Month Comparison Summary -->
+            <div class="glass-card glass-card-glow" style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 11px; color: var(--text-muted);">Month-over-Month Delta</div>
+                <div style="font-size: 18px; font-weight: 800; color: #10B981;">-$251.65 Spent</div>
+                <div style="font-size: 11px; color: var(--text-sub);">6.8% less than July 2026</div>
+              </div>
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; color: #10B981; font-size: 18px;">
+                <i class="fas fa-arrow-trend-down"></i>
+              </div>
+            </div>
+          </section>
+
+          <!-- =========================================================================
+               7. BUDGET SCREEN
+               ========================================================================= -->
+          <section id="screen-budget" class="app-screen">
+            <div class="section-header">
+              <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 800;">Budget & Goals</h2>
+              <span class="user-badge-vip" style="background: rgba(16,185,129,0.2); color: #10B981; border: 1px solid rgba(16,185,129,0.4);">
+                On Track
+              </span>
+            </div>
+
+            <!-- Monthly Overall Budget Gauge Card -->
+            <div class="glass-card" style="display: flex; align-items: center; justify-content: space-between; padding: 20px;">
+              <div>
+                <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Monthly Budget Cap</div>
+                <div style="font-size: 24px; font-weight: 800; color: #FFFFFF; margin: 4px 0;">$3,450.75</div>
+                <div style="font-size: 11px; color: var(--text-sub);">spent of <strong>$5,000.00</strong> limit</div>
+                <div style="font-size: 10px; color: #10B981; margin-top: 6px;">
+                  <i class="fas fa-circle-check"></i> $1,549.25 remaining (23 days)
+                </div>
+              </div>
+              <div id="main-budget-circular-gauge">
+                <!-- Circular SVG gauge rendered by charts.js -->
+              </div>
+            </div>
+
+            <!-- Overspending Alert Banner -->
+            <div class="glass-card" style="border-left: 3px solid #F59E0B; background: rgba(245,158,11,0.08);">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-triangle-exclamation" style="color: #F59E0B; font-size: 18px;"></i>
+                <div>
+                  <div style="font-size: 12px; font-weight: 700; color: #FFFFFF;">Shopping & Tech Near Limit</div>
+                  <div style="font-size: 10px; color: var(--text-sub);">Running at 81% of $1,200 allocation. Slow down non-essentials.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upcoming Bills Calendar -->
+            <div class="glass-card">
+              <div class="section-header" style="margin-bottom: 12px;">
+                <h3 class="section-title">
+                  <i class="fas fa-calendar-check" style="color: #5DA9FF;"></i> Upcoming Recurring Bills
+                </h3>
+                <span style="font-size: 11px; color: var(--text-muted);">5 active</span>
+              </div>
+              <div id="budget-upcoming-bills">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <!-- Savings Goals Milestone Progress -->
+            <div class="glass-card">
+              <div class="section-header" style="margin-bottom: 12px;">
+                <h3 class="section-title">
+                  <i class="fas fa-bullseye-arrow" style="color: #9F6EFF;"></i> Wealth Milestones & Goals
+                </h3>
+                <button class="section-action-link" onclick="FinApp.showToast('Goal created', 'New wealth target initialized!')">
+                  + New Goal
+                </button>
+              </div>
+              <div id="budget-savings-goals">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <!-- AI Budget Suggestions -->
+            <div class="glass-card" style="background: rgba(124,92,255,0.12); border-color: rgba(124,92,255,0.35);">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <i class="fas fa-sparkles" style="color: #7C5CFF;"></i>
+                <span style="font-size: 12px; font-weight: 700; color: #FFFFFF;">AI Budget Adjustment Suggestion</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-sub); line-height: 1.5; margin-bottom: 10px;">
+                Reallocating <strong>$150.00</strong> from Entertainment to Tokyo Trip goal accelerates your target date by <strong>18 days</strong>!
+              </p>
+              <button class="btn-glow-primary" onclick="FinApp.showToast('Auto-Allocated', 'Shifted $150 to Tokyo Trip Goal!')" style="padding: 9px 14px; font-size: 11px;">
+                Apply AI Reallocation
+              </button>
+            </div>
+
+          </section>
+
+          <!-- =========================================================================
+               8. REPORTS SCREEN
+               ========================================================================= -->
+          <section id="screen-reports" class="app-screen">
+            <div class="section-header">
+              <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 800;">Financial Reports</h2>
+              <div class="user-badge-vip">Certified Audit</div>
+            </div>
+
+            <!-- One-tap Export Actions (Generate PDF, Generate Excel) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+              <button class="glass-card glass-card-sm" onclick="FinApp.showPdfPreview()" style="display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; text-align: center; border: 1px solid rgba(124,92,255,0.4);">
+                <i class="fas fa-file-pdf" style="font-size: 24px; color: #EC4899;"></i>
+                <span style="font-size: 12px; font-weight: 700; color: #FFFFFF;">Generate PDF</span>
+                <span style="font-size: 10px; color: var(--text-muted);">Visual Statement</span>
+              </button>
+
+              <button class="glass-card glass-card-sm" onclick="FinApp.exportCsv()" style="display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; text-align: center; border: 1px solid rgba(16,185,129,0.4);">
+                <i class="fas fa-file-excel" style="font-size: 24px; color: #10B981;"></i>
+                <span style="font-size: 12px; font-weight: 700; color: #FFFFFF;">Generate Excel</span>
+                <span style="font-size: 10px; color: var(--text-muted);">XLSX / CSV Ledger</span>
+              </button>
+            </div>
+
+            <!-- Report Frequency Selectors -->
+            <div class="glass-card">
+              <div class="section-header" style="margin-bottom: 10px;">
+                <h3 class="section-title"><i class="fas fa-clock" style="color: #5DA9FF;"></i> Statement Period</h3>
+              </div>
+              <div class="filter-pills-row" style="margin-bottom: 0;">
+                <button class="filter-pill active">Monthly Report</button>
+                <button class="filter-pill">Yearly Report</button>
+                <button class="filter-pill">Category Report</button>
+                <button class="filter-pill">Merchant Report</button>
+              </div>
+            </div>
+
+            <!-- Key Financial Summary Card -->
+            <div class="glass-card">
+              <h3 class="section-title" style="margin-bottom: 14px;">
+                <i class="fas fa-shield-heart" style="color: #10B981;"></i> Certified Financial Health
+              </h3>
+              
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <span style="color: var(--text-muted); font-size: 12px;">Financial Health Score</span>
+                <span style="color: #10B981; font-weight: 700; font-size: 13px;">92 / 100 (Exceptional)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <span style="color: var(--text-muted); font-size: 12px;">Savings Rate</span>
+                <span style="color: #7C5CFF; font-weight: 700; font-size: 13px;">72.3% of Gross Inflow</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <span style="color: var(--text-muted); font-size: 12px;">Emergency Runway</span>
+                <span style="color: #5DA9FF; font-weight: 700; font-size: 13px;">14.2 Months</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                <span style="color: var(--text-muted); font-size: 12px;">Tax Deduction Estimator</span>
+                <span style="color: #9F6EFF; font-weight: 700; font-size: 13px;">$2,420.00 Eligible</span>
+              </div>
+            </div>
+
+            <button class="quick-action-pill" onclick="FinApp.showToast('Share Statement', 'Statement link generated!')" style="width: 100%; justify-content: center; height: 44px;">
+              <i class="fas fa-share-nodes"></i> Share Certified Statement
+            </button>
+          </section>
+
+          <!-- =========================================================================
+               9. SEARCH SCREEN
+               ========================================================================= -->
+          <section id="screen-search" class="app-screen">
+            <div class="section-header">
+              <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 800;">Smart Search</h2>
+              <div class="user-badge-vip">AI Search</div>
+            </div>
+
+            <!-- Search Input -->
+            <div class="glass-card glass-card-sm" style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 14px; border-color: var(--primary);">
+              <i class="fas fa-search" style="color: var(--primary);"></i>
+              <input type="text" id="global-search-input" placeholder="Search coffee, Amazon, UPI under $50..." oninput="FinApp.handleSearch(this.value)" style="background: transparent; border: none; outline: none; color: #FFFFFF; font-size: 13px; width: 100%;">
+            </div>
+
+            <!-- Smart AI Search Tags -->
+            <div style="margin-bottom: 14px;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px;">Smart Suggestions</div>
+              <div class="filter-pills-row" style="margin-bottom: 0;">
+                <button class="filter-pill" onclick="FinApp.applyQuickSearch('Apple')">Apple purchases</button>
+                <button class="filter-pill" onclick="FinApp.applyQuickSearch('Food')">Food & Dining</button>
+                <button class="filter-pill" onclick="FinApp.applyQuickSearch('UPI')">UPI payments</button>
+                <button class="filter-pill" onclick="FinApp.applyQuickSearch('Netflix')">Subscriptions</button>
+              </div>
+            </div>
+
+            <!-- Search Results Container -->
+            <div class="section-header">
+              <h3 class="section-title"><i class="fas fa-list" style="color: #5DA9FF;"></i> Search Results</h3>
+              <span id="search-count-label" style="font-size: 11px; color: var(--text-muted);">10 matches</span>
+            </div>
+            <div id="search-results-list" class="transaction-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </section>
+
+          <!-- =========================================================================
+               10. NOTIFICATIONS SCREEN
+               ========================================================================= -->
+          <section id="screen-notifications" class="app-screen">
+            <div class="section-header">
+              <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 800;">Alerts & Activity</h2>
+              <button class="section-action-link" onclick="FinApp.showToast('Cleared', 'All alerts marked as read.')">
+                Mark all read
+              </button>
+            </div>
+
+            <!-- Notifications Stream -->
+            <div id="notifications-stream-list" class="transaction-list">
+              <!-- Rendered via JS -->
+            </div>
+          </section>
+
+          <!-- =========================================================================
+               11. PROFILE SCREEN
+               ========================================================================= -->
+          <section id="screen-profile" class="app-screen">
+            
+            <!-- User Profile Glass Card -->
+            <div class="glass-card" style="text-align: center; padding: 22px 16px; margin-bottom: 14px;">
+              <div style="position: relative; width: 68px; height: 68px; margin: 0 auto 10px;">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 0 20px var(--primary-glow);">
+                <span class="avatar-online-badge" style="width: 15px; height: 15px;"></span>
+              </div>
+              <h2 id="profile-user-name" style="font-family: var(--font-heading); font-size: 19px; font-weight: 800;">Alex Morgan</h2>
+              <p id="profile-user-email" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">alex.morgan@finpilot.io</p>
+              <div style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; font-size: 10px; background: rgba(124,92,255,0.2); color: #5DA9FF; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(124,92,255,0.4);">
+                <i class="fas fa-shield-check"></i> FinPilot Ultra Black Member
+              </div>
+            </div>
+
+            <!-- Premium Holographic Titanium Membership Card -->
+            <div class="metal-membership-card">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.1em; text-transform: uppercase;">FinPilot Black Titanium</div>
+                  <div style="font-size: 9px; color: rgba(255,255,255,0.5);">Metal VIP • Autonomous Concierge</div>
+                </div>
+                <i class="fas fa-wifi" style="transform: rotate(90deg); color: rgba(255,255,255,0.6);"></i>
+              </div>
+
+              <div class="metal-chip-icon"></div>
+
+              <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 13px; color: #FFFFFF; letter-spacing: 0.15em;">•••• 4920</div>
+                  <div style="font-size: 10px; color: rgba(255,255,255,0.6); text-transform: uppercase; margin-top: 2px;">Alex Morgan</div>
+                </div>
+                <div style="font-family: var(--font-heading); font-size: 14px; font-weight: 800; color: #FFFFFF;">
+                  FINPILOT
+                </div>
+              </div>
+            </div>
+
+            <!-- Connected Accounts Summary -->
+            <div class="glass-card">
+              <div class="section-header" style="margin-bottom: 12px;">
+                <h3 class="section-title"><i class="fas fa-link" style="color: #7C5CFF;"></i> Connected Accounts</h3>
+                <span style="font-size: 11px; color: #10B981;">5 Linked</span>
+              </div>
+              <div id="profile-accounts-list">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Realtime Sync & Integrations -->
+            <div class="glass-card">
+              <h3 class="section-title" style="margin-bottom: 12px;">
+                <i class="fas fa-sync" style="color: #5DA9FF;"></i> Realtime Sync & Security
+              </h3>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #FFFFFF;">Bank SMS Sync</div>
+                  <div style="font-size: 10px; color: #10B981;">● Active (Auto-reads transaction SMS)</div>
+                </div>
+                <input type="checkbox" checked onchange="FinApp.toggleSetting('Bank SMS Sync')">
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #FFFFFF;">Email Statement Sync</div>
+                  <div style="font-size: 10px; color: #10B981;">● Active (Chase & HDFC connected)</div>
+                </div>
+                <input type="checkbox" checked onchange="FinApp.toggleSetting('Email Statement Sync')">
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #FFFFFF;">Biometric Face ID Lock</div>
+                  <div style="font-size: 10px; color: var(--text-muted);">Required for all transfers over $100</div>
+                </div>
+                <input type="checkbox" checked onchange="FinApp.toggleSetting('Biometric Lock')">
+              </div>
+            </div>
+
+            <!-- Cloud Backup & Sign Out -->
+            <div class="glass-card">
+              <button onclick="FinApp.showToast('iCloud Synced', 'Encrypted cloud snapshot saved!')" class="quick-action-pill" style="width: 100%; justify-content: center; margin-bottom: 8px;">
+                <i class="fas fa-cloud-arrow-up"></i> Backup to iCloud / Google Drive
+              </button>
+              <button onclick="FinApp.showScreen('login')" class="quick-action-pill" style="width: 100%; justify-content: center; color: #F43F5E;">
+                <i class="fas fa-right-from-bracket"></i> Sign Out of FinPilot
+              </button>
+            </div>
+          </section>
+
+          <!-- =========================================================================
+               12. SETTINGS SCREEN
+               ========================================================================= -->
+          <section id="screen-settings" class="app-screen">
+            <div class="section-header">
+              <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 800;">Preferences & AI</h2>
+            </div>
+
+            <!-- Currency & Language -->
+            <div class="glass-card">
+              <h3 class="section-title" style="margin-bottom: 10px;"><i class="fas fa-globe" style="color: #7C5CFF;"></i> Localization</h3>
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Primary Currency</label>
+                <select onchange="FinApp.setCurrency(this.value)" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #FFF; padding: 8px 12px; font-size: 12px; outline: none;">
+                  <option value="$" selected>USD ($) — United States Dollar</option>
+                  <option value="₹">INR (₹) — Indian Rupee (UPI)</option>
+                  <option value="€">EUR (€) — Euro</option>
+                  <option value="£">GBP (£) — British Pound</option>
+                  <option value="¥">JPY (¥) — Japanese Yen</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Language</label>
+                <select style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #FFF; padding: 8px 12px; font-size: 12px; outline: none;">
+                  <option selected>English (United States)</option>
+                  <option>Spanish (Español)</option>
+                  <option>Hindi (हिन्दी)</option>
+                  <option>French (Français)</option>
+                  <option>German (Deutsch)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- AI Engine Settings -->
+            <div class="glass-card">
+              <h3 class="section-title" style="margin-bottom: 10px;"><i class="fas fa-brain-circuit" style="color: #5DA9FF;"></i> AI Copilot Engine</h3>
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Intelligence Model</label>
+                <select style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #FFF; padding: 8px 12px; font-size: 12px; outline: none;">
+                  <option selected>GPT-4.5 Ultra Finance (Recommended)</option>
+                  <option>Claude 3.5 Sonnet Financial Analyst</option>
+                  <option>Google Gemini 1.5 Pro Neural</option>
+                </select>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0;">
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #FFFFFF;">Proactive Overspend Nudges</div>
+                  <div style="font-size: 10px; color: var(--text-muted);">AI sends push if velocity exceeds 15%</div>
+                </div>
+                <input type="checkbox" checked onchange="FinApp.toggleSetting('Proactive Nudges')">
+              </div>
+            </div>
+
+            <!-- Data Cache & Storage -->
+            <div class="glass-card">
+              <h3 class="section-title" style="margin-bottom: 10px;"><i class="fas fa-database" style="color: #9F6EFF;"></i> Storage & Cache</h3>
+              <button onclick="FinApp.showToast('Cache Purged', 'Local SQLite cache cleared.');" class="quick-action-pill" style="width: 100%; justify-content: center;">
+                <i class="fas fa-trash-can"></i> Clear Offline Cache (14.2 MB)
+              </button>
+            </div>
+          </section>
+
+        </div><!-- /phone-viewport -->
+
+        <!-- Floating Action Button (+ Add Transaction) -->
+        <button class="floating-fab-btn" onclick="FinApp.openModal('modal-add-tx')" title="Add Transaction">
+          <i class="fas fa-plus"></i>
+        </button>
+
+        <!-- =========================================================================
+             FLOATING GLASS BOTTOM NAVIGATION BAR
+             ========================================================================= -->
+        <nav class="floating-nav-bar">
+          <button class="nav-item-btn active" data-screen="home" onclick="FinApp.showScreen('home')">
+            <i class="fas fa-house"></i>
+            <span>Home</span>
+          </button>
+
+          <button class="nav-item-btn" data-screen="transactions" onclick="FinApp.showScreen('transactions')">
+            <i class="fas fa-receipt"></i>
+            <span>Activity</span>
+          </button>
+
+          <!-- Center Glowing AI Orb Button -->
+          <div class="nav-center-ai-orb" onclick="FinApp.showScreen('ai')" title="AI Assistant">
+            <i class="fas fa-brain-circuit" style="font-size: 22px;"></i>
+          </div>
+
+          <button class="nav-item-btn" data-screen="analytics" onclick="FinApp.showScreen('analytics')">
+            <i class="fas fa-chart-simple"></i>
+            <span>Analytics</span>
+          </button>
+
+          <button class="nav-item-btn" data-screen="profile" onclick="FinApp.showScreen('profile')">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+          </button>
+        </nav>
+
+        <!-- =========================================================================
+             INTERACTIVE MODALS & BOTTOM SHEETS
+             ========================================================================= -->
+
+        <!-- MODAL 1: SCAN QR VIEW FINDER -->
+        <div id="modal-scan-qr" class="modal-overlay">
+          <div class="modal-sheet-card">
+            <div class="sheet-handle-bar" onclick="FinApp.closeModal('modal-scan-qr')"></div>
+            <div class="modal-header-row">
+              <h3 class="modal-title"><i class="fas fa-qrcode" style="color: #7C5CFF;"></i> Scan Any UPI or Card QR</h3>
+              <button class="modal-close-btn" onclick="FinApp.closeModal('modal-scan-qr')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Viewfinder with Laser Scan Animation -->
+            <div class="qr-viewfinder">
+              <div class="qr-scan-laser"></div>
+              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: rgba(255,255,255,0.4);">
+                <i class="fas fa-expand" style="font-size: 36px; margin-bottom: 6px;"></i>
+                <div style="font-size: 10px;">Align QR inside frame</div>
+              </div>
+            </div>
+
+            <p style="font-size: 11px; text-align: center; color: var(--text-muted); margin-bottom: 14px;">
+              Supports Google Pay, PhonePe, Paytm, BharatPe, Apple Pay & Visa QR codes.
+            </p>
+
+            <button class="btn-glow-primary" onclick="FinApp.closeModal('modal-scan-qr'); FinApp.openModal('modal-send-money');">
+              <i class="fas fa-camera"></i> Simulate Scan → Pay Merchant
+            </button>
+          </div>
+        </div>
+
+        <!-- MODAL 2: SEND MONEY MODAL (Keypad + Contacts) -->
+        <div id="modal-send-money" class="modal-overlay">
+          <div class="modal-sheet-card">
+            <div class="sheet-handle-bar" onclick="FinApp.closeModal('modal-send-money')"></div>
+            <div class="modal-header-row">
+              <h3 class="modal-title"><i class="fas fa-paper-plane" style="color: #5DA9FF;"></i> Send Instant Money</h3>
+              <button class="modal-close-btn" onclick="FinApp.closeModal('modal-send-money')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Quick Contacts Row -->
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Recent Payees</div>
+            <div id="send-contacts-row" class="contacts-avatar-row">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Amount Display -->
+            <div style="text-align: center; padding: 10px 0;">
+              <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Transfer Amount</div>
+              <div id="transfer-amount-display" style="font-family: var(--font-heading); font-size: 34px; font-weight: 800; color: #FFFFFF; text-shadow: 0 0 20px rgba(124,92,255,0.4);">
+                $0
+              </div>
+              <div style="font-size: 10px; color: #10B981;">Zero fee • Instant UPI & ACH Clearance</div>
+            </div>
+
+            <!-- Numeric Keypad -->
+            <div class="numeric-keypad">
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('1')">1</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('2')">2</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('3')">3</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('4')">4</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('5')">5</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('6')">6</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('7')">7</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('8')">8</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('9')">9</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('.')">.</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('0')">0</button>
+              <button class="keypad-btn" onclick="FinApp.handleKeypad('del')"><i class="fas fa-delete-left"></i></button>
+            </div>
+
+            <button class="btn-glow-primary" onclick="FinApp.executeTransfer()">
+              <i class="fas fa-bolt"></i> Transfer Now with Face ID
+            </button>
+          </div>
+        </div>
+
+        <!-- MODAL 3: VOICE ASSISTANT LIVE WAVEFORM -->
+        <div id="modal-voice-assistant" class="modal-overlay">
+          <div class="modal-sheet-card" style="text-align: center;">
+            <div class="sheet-handle-bar" onclick="FinApp.closeModal('modal-voice-assistant')"></div>
+            <div class="modal-header-row">
+              <h3 class="modal-title"><i class="fas fa-waveform-lines" style="color: #9F6EFF;"></i> Listening with Voice AI</h3>
+              <button class="modal-close-btn" onclick="FinApp.closeModal('modal-voice-assistant')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div class="voice-wave-container">
+              <div class="voice-wave-bar"></div>
+              <div class="voice-wave-bar"></div>
+              <div class="voice-wave-bar"></div>
+              <div class="voice-wave-bar"></div>
+              <div class="voice-wave-bar"></div>
+              <div class="voice-wave-bar"></div>
+              <div class="voice-wave-bar"></div>
+              <div class="voice-wave-bar"></div>
+            </div>
+
+            <div style="font-size: 14px; font-weight: 700; color: #FFFFFF; margin: 10px 0;">
+              "How much did I spend at restaurants this week?"
+            </div>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 18px;">
+              FinPilot neural model is processing your real-time audio stream.
+            </p>
+
+            <button class="btn-glow-primary" onclick="FinApp.closeModal('modal-voice-assistant'); FinApp.showScreen('ai'); FinApp.askAi('Show food expenses.');">
+              <i class="fas fa-check"></i> Process Voice Prompt
+            </button>
+          </div>
+        </div>
+
+        <!-- MODAL 4: TRANSACTION DETAILS & RECEIPT -->
+        <div id="modal-tx-receipt" class="modal-overlay">
+          <div class="modal-sheet-card">
+            <div class="sheet-handle-bar" onclick="FinApp.closeModal('modal-tx-receipt')"></div>
+            <div class="modal-header-row">
+              <h3 class="modal-title">Transaction Receipt</h3>
+              <button class="modal-close-btn" onclick="FinApp.closeModal('modal-tx-receipt')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div id="receipt-modal-content">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL 5: ADD NEW TRANSACTION MODAL -->
+        <div id="modal-add-tx" class="modal-overlay">
+          <div class="modal-sheet-card">
+            <div class="sheet-handle-bar" onclick="FinApp.closeModal('modal-add-tx')"></div>
+            <div class="modal-header-row">
+              <h3 class="modal-title"><i class="fas fa-plus-circle" style="color: #10B981;"></i> Record Transaction</h3>
+              <button class="modal-close-btn" onclick="FinApp.closeModal('modal-add-tx')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <form onsubmit="FinApp.handleAddTransactionSubmit(event)">
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Merchant / Payee Name</label>
+                <input type="text" id="new-tx-merchant" placeholder="e.g. Starbucks, Amazon, Zomato" required style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #FFF; padding: 10px 12px; font-size: 13px; outline: none;">
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Amount ($)</label>
+                  <input type="number" step="0.01" id="new-tx-amount" placeholder="45.00" required style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #FFF; padding: 10px 12px; font-size: 13px; outline: none;">
+                </div>
+                <div>
+                  <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Category</label>
+                  <select id="new-tx-category" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #FFF; padding: 10px 12px; font-size: 12px; outline: none;">
+                    <option value="Food">Food & Dining</option>
+                    <option value="Shopping">Shopping & Tech</option>
+                    <option value="Travel">Travel & Fuel</option>
+                    <option value="Bills">Bills & Utilities</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Medical">Medical & Health</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 14px;">
+                <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Payment Method</label>
+                <select id="new-tx-method" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: #FFF; padding: 10px 12px; font-size: 12px; outline: none;">
+                  <option value="UPI">UPI FastPay</option>
+                  <option value="Apple Card">Apple Card Titanium</option>
+                  <option value="Chase Visa">Chase Sapphire</option>
+                  <option value="HDFC Bank">HDFC Direct</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn-glow-primary">
+                <i class="fas fa-check"></i> Save & Auto-Categorize with AI
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- MODAL 6: PDF STATEMENT PREVIEW -->
+        <div id="modal-pdf-report" class="modal-overlay">
+          <div class="modal-sheet-card">
+            <div class="sheet-handle-bar" onclick="FinApp.closeModal('modal-pdf-report')"></div>
+            <div class="modal-header-row">
+              <h3 class="modal-title"><i class="fas fa-file-pdf" style="color: #EC4899;"></i> Monthly PDF Statement</h3>
+              <button class="modal-close-btn" onclick="FinApp.closeModal('modal-pdf-report')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-glass); border-radius: 16px; padding: 18px; font-size: 12px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 10px;">
+                <div>
+                  <div style="font-weight: 800; font-size: 14px; color: #FFFFFF;">FinPilot Wealth Statement</div>
+                  <div style="font-size: 10px; color: var(--text-muted);">Period: August 01 - August 31, 2026</div>
+                </div>
+                <div style="text-align: right;">
+                  <span class="user-badge-vip">Audited</span>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                  <span style="color: var(--text-muted); font-size: 10px;">Total Inflows</span>
+                  <div style="font-weight: 700; color: #10B981; font-size: 14px;">+$12,450.00</div>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted); font-size: 10px;">Total Outflows</span>
+                  <div style="font-weight: 700; color: #FFFFFF; font-size: 14px;">-$3,450.75</div>
+                </div>
+              </div>
+
+              <div style="font-size: 11px; color: var(--text-sub); line-height: 1.6;">
+                • Verified 10 ledger transactions<br>
+                • Tax deductions identified: $2,420.00<br>
+                • Net savings velocity: +$8,999.25 (72.3% rate)
+              </div>
+            </div>
+
+            <button class="btn-glow-primary" onclick="FinApp.downloadPdfStatement();">
+              <i class="fas fa-download"></i> Download Official PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- MODAL 7: FILTER MODAL -->
+        <div id="modal-filter" class="modal-overlay">
+          <div class="modal-sheet-card">
+            <div class="sheet-handle-bar" onclick="FinApp.closeModal('modal-filter')"></div>
+            <div class="modal-header-row">
+              <h3 class="modal-title"><i class="fas fa-sliders" style="color: #7C5CFF;"></i> Filter & Sort Activity</h3>
+              <button class="modal-close-btn" onclick="FinApp.closeModal('modal-filter')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">Date Range</label>
+              <div class="filter-pills-row" style="margin-bottom: 0;">
+                <button class="filter-pill active">This Month</button>
+                <button class="filter-pill">Last 30 Days</button>
+                <button class="filter-pill">Year to Date</button>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 18px;">
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">Sort Order</label>
+              <div class="filter-pills-row" style="margin-bottom: 0;">
+                <button class="filter-pill active">Newest First</button>
+                <button class="filter-pill">Highest Amount</button>
+                <button class="filter-pill">Cashback</button>
+              </div>
+            </div>
+
+            <button class="btn-glow-primary" onclick="FinApp.closeModal('modal-filter'); FinApp.showToast('Filters Applied', 'Activity stream updated.');">
+              Apply Filters
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /device-phone -->
+    </main>
+
+  </div><!-- /studio-layout -->
+
+  <!-- Load FinPilot Engine Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/background.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
