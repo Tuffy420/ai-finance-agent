@@ -13,7 +13,7 @@ const FinApp = {
   transferAmount: '0',
   currentCurrency: '$',
 
-  init() {
+  async init() {
     this.bindEvents();
     this.renderHome();
     this.renderTransactions();
@@ -26,6 +26,18 @@ const FinApp = {
     this.renderProfile();
     this.renderSendContacts();
     this.startClock();
+
+    // Check & connect to FastAPI backend
+    if (window.FinApi) {
+      await FinApi.init();
+      if (FinApi.isOnline) {
+        const liveData = await FinApi.getDashboardSummary();
+        if (liveData && liveData.total_balance) {
+          FinData.summary.totalBalance = liveData.total_balance;
+          this.renderHome();
+        }
+      }
+    }
 
     // Splash Screen auto-dismissal after 2 seconds
     setTimeout(() => {
@@ -387,6 +399,17 @@ const FinApp = {
       valEl.textContent = FinData.summary.totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
+    // Persist to live backend if available
+    if (window.FinApi && FinApi.isOnline) {
+      FinApi.createTransaction({
+        merchant_name: merchant,
+        amount: Math.abs(amount),
+        category: category,
+        payment_method: method,
+        notes: "Auto-logged via FinPilot UI"
+      }).catch(err => console.warn('Backend sync:', err));
+    }
+
     this.showToast('Transaction Logged', `Logged $${Math.abs(amount).toFixed(2)} at ${merchant}`);
   },
 
@@ -448,7 +471,35 @@ const FinApp = {
 
     stream.scrollTop = stream.scrollHeight;
 
-    // Generate intelligent AI response
+    // Fetch from FastAPI AI assistant if backend is online
+    if (window.FinApi && FinApi.isOnline) {
+      FinApi.chatWithAi(query).then(res => {
+        typingBubble.remove();
+        let markdownText = res && (res.response_markdown || res.response) ? (res.response_markdown || res.response) : this.generateAiResponse(query);
+        const resBubble = document.createElement('div');
+        resBubble.className = 'chat-bubble ai';
+        resBubble.innerHTML = `
+          <div class="ai-chat-meta-badge"><i class="fas fa-sparkles"></i> FinPilot Intelligence (FastAPI)</div>
+          ${markdownText.replace(/\n/g, '<br>')}
+        `;
+        stream.appendChild(resBubble);
+        stream.scrollTop = stream.scrollHeight;
+      }).catch(() => {
+        typingBubble.remove();
+        const aiResponse = this.generateAiResponse(query);
+        const resBubble = document.createElement('div');
+        resBubble.className = 'chat-bubble ai';
+        resBubble.innerHTML = `
+          <div class="ai-chat-meta-badge"><i class="fas fa-sparkles"></i> FinPilot Intelligence</div>
+          ${aiResponse}
+        `;
+        stream.appendChild(resBubble);
+        stream.scrollTop = stream.scrollHeight;
+      });
+      return;
+    }
+
+    // Generate intelligent AI response via standalone neural simulation
     setTimeout(() => {
       typingBubble.remove();
       const aiResponse = this.generateAiResponse(query);
@@ -771,10 +822,18 @@ const FinApp = {
 
   downloadPdfStatement() {
     this.closeModal('modal-pdf-report');
-    this.showToast('PDF Downloaded', 'FinPilot_Monthly_Statement_August2026.pdf saved!');
+    if (window.FinApi && FinApi.isOnline) {
+      window.open(FinApi.getPdfReportUrl(), '_blank');
+    }
+    this.showToast('PDF Statement', 'Official statement generated.');
   },
 
   exportCsv() {
+    if (window.FinApi && FinApi.isOnline) {
+      window.open(FinApi.getCsvReportUrl(), '_blank');
+      this.showToast('CSV Exported', 'FastAPI backend generated live transaction ledger.');
+      return;
+    }
     let csv = "ID,Merchant,Category,Date,Time,Amount,PaymentMethod,Status\n";
     FinData.transactions.forEach(t => {
       csv += `"${t.id}","${t.merchant}","${t.category}","${t.date}","${t.time}","${t.amount}","${t.paymentMethod}","${t.status}"\n`;

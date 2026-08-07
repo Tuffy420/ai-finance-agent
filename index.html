@@ -94,10 +94,13 @@
           </button>
         </div>
 
-        <!-- Audio SFX Toggle -->
+        <!-- Audio SFX & Backend Status -->
         <button id="btn-toggle-audio" class="quick-action-pill active" onclick="FinApp.toggleAudio()">
           <i class="fas fa-volume-high"></i> SFX On
         </button>
+        <div id="backend-status-badge" class="quick-action-pill" style="font-size: 11px; font-weight: 600; color: #5DA9FF;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#5DA9FF; margin-right:5px;"></span> Standalone Engine
+        </div>
       </div>
     </header>
 
@@ -1213,6 +1216,7 @@
   <!-- Load FinPilot Engine Scripts -->
   <script src="js/data.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/api.js"></script>
   <script src="js/background.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/app.js"></script>
