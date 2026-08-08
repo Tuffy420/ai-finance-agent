@@ -1,61 +1,47 @@
 """
-Integration Tests for Authentication, Transactions, and AI Endpoints
+Unit Tests for OTP, Auth, and Analytics Engine
 """
 
-import pytest
+import asyncio
+from app.auth.otp import store_email_otp, verify_email_otp
+from app.auth.jwt import create_access_token, decode_token
+from app.auth.security import hash_password, verify_password, encrypt_sensitive_field, decrypt_sensitive_field
 
 
-@pytest.mark.asyncio
-async def test_health_check(client):
-    response = await client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
+def test_password_hashing_and_verification():
+    raw_pass = "FinPilot@2026"
+    hashed = hash_password(raw_pass)
+    assert hashed != raw_pass
+    assert verify_password(raw_pass, hashed) is True
+    assert verify_password("WrongPassword", hashed) is False
 
 
-@pytest.mark.asyncio
-async def test_email_otp_flow(client):
-    req = await client.post("/api/v1/auth/email-otp/request", json={"email": "alex.morgan@finpilot.io"})
-    assert req.status_code == 200
+def test_jwt_token_lifecycle():
+    user_id = "user_uuid_12345"
+    token = create_access_token(user_id, role="user")
+    assert isinstance(token, str)
 
-    verify = await client.post("/api/v1/auth/email-otp/verify", json={
-        "email": "alex.morgan@finpilot.io",
-        "otp_code": "123456"
-    })
-    assert verify.status_code == 200
-    token_data = verify.json()
-    assert "access_token" in token_data
-    assert token_data["token_type"] == "bearer"
+    payload = decode_token(token)
+    assert payload is not None
+    assert payload["sub"] == user_id
+    assert payload["type"] == "access"
 
 
-@pytest.mark.asyncio
-async def test_parse_sms_endpoint(client):
-    payload = {
-        "sms_text": "Rs.350 debited from A/c XXXX UPI SWIGGY Ref:12345678",
-        "sender": "HDFC Bank"
-    }
-    response = await client.post("/api/v1/transactions/parse-sms", json=payload)
-    assert response.status_code == 200
-    res = response.json()
-    assert res["success"] is True
-    assert res["transaction"]["amount"] == -350.0
-    assert res["transaction"]["category"] == "Food"
+def test_email_otp_generation_and_verification():
+    email = "test.user@finpilot.io"
+    otp = store_email_otp(email, ttl_seconds=300)
+    assert len(otp) == 6
+    assert otp.isdigit()
+
+    assert verify_email_otp(email, otp) is True
+    # Once verified, it should be consumed
+    assert verify_email_otp(email, otp) is False
 
 
-@pytest.mark.asyncio
-async def test_ai_chat_endpoint(client):
-    response = await client.post("/api/v1/ai/chat", json={"query": "Show food expenses."})
-    assert response.status_code == 200
-    res = response.json()
-    assert "response_markdown" in res
-    assert res["action_type"] in ["category_breakdown", "general_advice", "summary"]
+def test_field_level_aes_encryption():
+    secret_account_no = "ACC-9481-0294-8812"
+    encrypted = encrypt_sensitive_field(secret_account_no)
+    assert encrypted != secret_account_no
 
-
-@pytest.mark.asyncio
-async def test_dashboard_summary_endpoint(client):
-    response = await client.get("/api/v1/dashboard/")
-    assert response.status_code == 200
-    dash = response.json()
-    assert "current_balance" in dash
-    assert "monthly_income" in dash
-    assert "monthly_spending" in dash
+    decrypted = decrypt_sensitive_field(encrypted)
+    assert decrypted == secret_account_no

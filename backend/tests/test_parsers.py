@@ -1,10 +1,11 @@
 """
-Unit Tests for Automatic SMS, Notification & Email Parsers
+Unit Tests for Automatic SMS, Notification & Email Parsers and Gemini AI Categorizer
 """
 
-import pytest
+import asyncio
 from app.parser.sms_parser import SMSParser
 from app.parser.notification_parser import NotificationParser, EmailParser
+from app.ai.categorizer import AICategorizer
 
 
 def test_upi_swiggy_sms_parsing():
@@ -47,3 +48,17 @@ def test_google_pay_notification_parsing():
     assert parsed["merchant"] == "Starbucks"
     assert parsed["payment_method"] == "UPI"
     assert parsed["source"] == "notification"
+
+
+def test_ai_categorizer_fast_rule_match():
+    cat, conf = asyncio.run(AICategorizer.categorize("Swiggy Order #9210"))
+    assert cat == "Food"
+    assert conf == 1.0
+
+    cat2, conf2 = asyncio.run(AICategorizer.categorize("Uber Black Airport"))
+    assert cat2 == "Travel"
+    assert conf2 == 1.0
+
+    cat3, conf3 = asyncio.run(AICategorizer.categorize("Netflix 4K Subscription"))
+    assert cat3 == "Entertainment"
+    assert conf3 == 1.0

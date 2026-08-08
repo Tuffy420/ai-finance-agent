@@ -11,7 +11,7 @@ from app.config.logging import logger
 
 class SMSParser:
     # Common currency symbols & patterns
-    CURRENCY_REGEX = r"(?:Rs\.?|INR|USD|\$|EUR|€|GBP|£)\s*([\d,]+\.?\d*)"
+    CURRENCY_REGEX = r"(?:Rs\.?|INR|₹|USD|\$|EUR|€|GBP|£)\s*([\d,]+\.?\d*)"
     REF_REGEX = r"(?:Ref(?:\s*no\.?|:)?|UPI\s*Ref(?:\s*no\.?|:)?|Txn\s*ID(?:\s*:)?|UTR(?:\s*:)?)\s*([A-Za-z0-9]+)"
     ACCOUNT_REGEX = r"(?:A/c|Account|card|ending\s*in)\s*(?:[xX*]+|no\.?\s*)(\d{3,4})"
     
@@ -97,7 +97,6 @@ class SMSParser:
     @classmethod
     def _extract_merchant(cls, text: str) -> str:
         """Heuristic and regex identification of merchant name"""
-        # Pattern: 'at <Merchant>' or 'to <Merchant>' or 'VPA <vpa>' or 'info <Merchant>'
         patterns = [
             r'(?:to|at|info|towards|for)\s+([A-Za-z0-9\s&.\'-]{2,30}?)(?:\s+on|\s+ref|\s+avail|\s+a/c|\s+balance|\s+date|\.|\n|$)',
             r'VPA\s+([A-Za-z0-9.\-_@]+)',
