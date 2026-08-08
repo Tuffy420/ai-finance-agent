@@ -22,6 +22,16 @@ class TransactionCreate(BaseModel):
     extra_metadata: Optional[Dict[str, Any]] = None
 
 
+class TransactionUpdate(BaseModel):
+    amount: Optional[float] = None
+    merchant: Optional[str] = None
+    category: Optional[str] = None
+    payment_method: Optional[str] = None
+    transaction_type: Optional[str] = None
+    transaction_date: Optional[datetime] = None
+    notes: Optional[str] = None
+
+
 class TransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

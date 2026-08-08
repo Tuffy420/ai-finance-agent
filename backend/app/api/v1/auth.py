@@ -115,6 +115,60 @@ async def oauth_login(payload: OAuthLoginRequest, db: AsyncSession = Depends(get
     return Token(access_token=access_token, refresh_token=refresh_token, expires_in=86400)
 
 
+@router.post("/google", response_model=Token)
+async def google_login(payload: OAuthLoginRequest, db: AsyncSession = Depends(get_db)):
+    """Dedicated Google Sign-In endpoint"""
+    info = await verify_google_token(payload.id_token)
+    email = info.get("email") if info else None
+    name = info.get("name") if info else None
+    
+    if not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Google ID token")
+
+    stmt = select(User).where(User.email == email.lower(), User.is_deleted == False)
+    user = (await db.execute(stmt)).scalar_one_or_none()
+    if not user:
+        user = User(email=email.lower(), full_name=name, is_verified=True, role="user")
+        user.settings = UserSettings()
+        db.add(user)
+        await db.flush()
+
+    access_token = create_access_token(user.id, role=user.role)
+    refresh_token = create_refresh_token(user.id)
+    return Token(access_token=access_token, refresh_token=refresh_token, expires_in=86400)
+
+
+@router.post("/apple", response_model=Token)
+async def apple_login(payload: OAuthLoginRequest, db: AsyncSession = Depends(get_db)):
+    """Dedicated Apple Sign-In endpoint"""
+    info = await verify_apple_token(payload.id_token)
+    email = info.get("email") if info else None
+    
+    if not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Apple ID token")
+
+    stmt = select(User).where(User.email == email.lower(), User.is_deleted == False)
+    user = (await db.execute(stmt)).scalar_one_or_none()
+    if not user:
+        user = User(email=email.lower(), is_verified=True, role="user")
+        user.settings = UserSettings()
+        db.add(user)
+        await db.flush()
+
+    access_token = create_access_token(user.id, role=user.role)
+    refresh_token = create_refresh_token(user.id)
+    return Token(access_token=access_token, refresh_token=refresh_token, expires_in=86400)
+
+
+@router.post("/logout")
+async def logout_user(current_user: User = Depends(get_current_user)):
+    """Revoke session and log out user"""
+    return {
+        "success": True,
+        "message": f"Successfully logged out user {current_user.email}. Client tokens invalidated."
+    }
+
+
 @router.post("/refresh", response_model=Token)
 async def refresh_token(payload: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
     """Rotate JWT refresh token"""

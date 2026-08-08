@@ -14,6 +14,14 @@ class BudgetCreate(BaseModel):
     month_year: Optional[str] = Field(default=None, description="Format YYYY-MM, defaults to current month")
 
 
+class BudgetUpdate(BaseModel):
+    name: Optional[str] = None
+    monthly_limit: Optional[float] = None
+    category_id: Optional[str] = None
+    currency: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 class BudgetResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

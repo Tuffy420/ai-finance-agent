@@ -160,3 +160,83 @@ async def search_transactions(
         sort_by=filters.sort_by,
         sort_order=filters.sort_order
     )
+
+
+@router.get("/{transaction_id}", response_model=TransactionResponse)
+async def get_transaction(
+    transaction_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve details of a single transaction"""
+    stmt = select(Transaction).where(
+        Transaction.id == transaction_id,
+        Transaction.user_id == current_user.id,
+        Transaction.is_deleted == False
+    )
+    tx = (await db.execute(stmt)).scalar_one_or_none()
+    if not tx:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    return tx
+
+
+@router.put("/{transaction_id}", response_model=TransactionResponse)
+async def update_transaction(
+    transaction_id: str,
+    payload: TransactionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Edit transaction details (amount, merchant, category, notes, date)"""
+    stmt = select(Transaction).where(
+        Transaction.id == transaction_id,
+        Transaction.user_id == current_user.id,
+        Transaction.is_deleted == False
+    )
+    tx = (await db.execute(stmt)).scalar_one_or_none()
+    if not tx:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    if payload.amount is not None:
+        tx.amount = payload.amount
+    if payload.merchant is not None:
+        tx.merchant = payload.merchant
+    if payload.category is not None:
+        tx.category = payload.category
+    if payload.payment_method is not None:
+        tx.payment_method = payload.payment_method
+    if payload.transaction_type is not None:
+        tx.transaction_type = payload.transaction_type
+    if payload.transaction_date is not None:
+        tx.transaction_date = payload.transaction_date
+    if payload.notes is not None:
+        tx.notes = payload.notes
+
+    await db.commit()
+    await db.refresh(tx)
+    return tx
+
+
+@router.delete("/{transaction_id}")
+async def delete_transaction(
+    transaction_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Soft delete a transaction and recalculate financial metrics"""
+    stmt = select(Transaction).where(
+        Transaction.id == transaction_id,
+        Transaction.user_id == current_user.id,
+        Transaction.is_deleted == False
+    )
+    tx = (await db.execute(stmt)).scalar_one_or_none()
+    if not tx:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    tx.is_deleted = True
+    await db.commit()
+    return {
+        "success": True,
+        "message": f"Transaction '{tx.merchant}' (${abs(tx.amount):.2f}) deleted successfully."
+    }
+

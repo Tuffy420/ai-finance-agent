@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.database.session import get_db
 from app.models.user import User
 from app.models.budget import Budget
-from app.schemas.budget import BudgetCreate, BudgetResponse
+from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse
 from app.schemas.analytics import AnalyticsSummaryResponse, DashboardPayload
 from app.schemas.ai import AIChatRequest, AIChatResponse, AIInsightItem
 from app.analytics.engine import AnalyticsEngine
@@ -78,6 +78,59 @@ async def create_budget(payload: BudgetCreate, current_user: User = Depends(get_
         month_year=b.month_year, is_active=True, spent_percentage=0.0,
         remaining_amount=b.monthly_limit, status="normal"
     )
+
+
+@budget_router.put("/{budget_id}", response_model=BudgetResponse)
+async def update_budget(
+    budget_id: str,
+    payload: BudgetUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Edit budget monthly target limit, category or name"""
+    stmt = select(Budget).where(Budget.id == budget_id, Budget.user_id == current_user.id)
+    budget = (await db.execute(stmt)).scalar_one_or_none()
+    if not budget:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget target not found")
+
+    if payload.name is not None:
+        budget.name = payload.name
+    if payload.monthly_limit is not None:
+        budget.monthly_limit = payload.monthly_limit
+    if payload.category_id is not None:
+        budget.category_id = payload.category_id
+    if payload.currency is not None:
+        budget.currency = payload.currency
+    if payload.is_active is not None:
+        budget.is_active = payload.is_active
+
+    await db.commit()
+    await db.refresh(budget)
+    pct = (budget.current_spent / budget.monthly_limit * 100) if budget.monthly_limit > 0 else 0
+    return BudgetResponse(
+        id=budget.id, user_id=budget.user_id, category_id=budget.category_id, name=budget.name,
+        monthly_limit=budget.monthly_limit, current_spent=budget.current_spent, currency=budget.currency,
+        month_year=budget.month_year, is_active=budget.is_active, spent_percentage=round(pct, 1),
+        remaining_amount=max(0, budget.monthly_limit - budget.current_spent),
+        status="exceeded" if pct >= 100 else ("warning" if pct >= 80 else "normal")
+    )
+
+
+@budget_router.delete("/{budget_id}")
+async def delete_budget(
+    budget_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Deactivate/delete a budget target"""
+    stmt = select(Budget).where(Budget.id == budget_id, Budget.user_id == current_user.id)
+    budget = (await db.execute(stmt)).scalar_one_or_none()
+    if not budget:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget target not found")
+
+    budget.is_active = False
+    await db.commit()
+    return {"success": True, "message": f"Budget target '{budget.name}' deleted successfully."}
 
 
 # =========================================================================

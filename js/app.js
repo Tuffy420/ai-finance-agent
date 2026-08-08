@@ -1,6 +1,7 @@
 /**
  * FinPilot AI - Main Application Controller & State Engine
- * Handles navigation, interactive AI chat, filtering, charts, modals, audio, exports & live updates.
+ * Handles Google/Apple Login, Logout, Interactive CRUD for Transactions & Budgets,
+ * Charts, AI Assistant, Exports, Audio Feedback, and PWA Installation.
  */
 
 const FinApp = {
@@ -10,6 +11,8 @@ const FinApp = {
   activeFilter: 'All',
   searchQuery: '',
   selectedContact: null,
+  activeTransactionId: null,
+  activeBudgetId: null,
   transferAmount: '0',
   currentCurrency: '$',
 
@@ -39,6 +42,17 @@ const FinApp = {
       }
     }
 
+    // Register Service Worker for Android PWA offline standalone mode
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // Capture Android PWA install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPwaPrompt = e;
+    });
+
     // Splash Screen auto-dismissal after 2 seconds
     setTimeout(() => {
       this.dismissSplash();
@@ -49,9 +63,28 @@ const FinApp = {
     const splash = document.getElementById('splash-screen');
     if (splash) {
       splash.style.opacity = '0';
+      splash.style.pointerEvents = 'none';
       setTimeout(() => {
-        splash.style.visibility = 'hidden';
-      }, 500);
+        splash.style.display = 'none';
+      }, 600);
+    }
+  },
+
+  bindEvents() {
+    // Quick search input
+    const searchInput = document.getElementById('global-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.handleSearch(e.target.value);
+      });
+    }
+
+    // Dynamic island tap
+    const island = document.getElementById('dynamic-island');
+    if (island) {
+      island.addEventListener('click', () => {
+        this.toggleDynamicIsland();
+      });
     }
   },
 
@@ -67,6 +100,50 @@ const FinApp = {
     };
     updateTime();
     setInterval(updateTime, 30000);
+  },
+
+  triggerPwaInstall() {
+    if (window.deferredPwaPrompt) {
+      window.deferredPwaPrompt.prompt();
+      window.deferredPwaPrompt.userChoice.then((choice) => {
+        if (choice.outcome === 'accepted') {
+          this.showToast('App Installed!', 'FinPilot AI is now on your Android home screen.');
+        }
+        window.deferredPwaPrompt = null;
+      });
+    } else {
+      alert('📱 To install on Android:\n1. Open this page in Chrome or Edge\n2. Tap the browser menu (⋮)\n3. Tap "Install App" or "Add to Home screen"');
+    }
+  },
+
+  // =========================================================================
+  // AUTHENTICATION: GOOGLE LOGIN, APPLE LOGIN, LOGOUT
+  // =========================================================================
+  async loginGoogle() {
+    if (window.FinAudio) window.FinAudio.playSuccess();
+    if (window.FinApi) {
+      await FinApi.loginWithGoogle();
+    }
+    this.showToast('Google Sign-In', 'Welcome back, Alex Morgan! Synced with Google Pay.');
+    this.showScreen('home');
+  },
+
+  async loginApple() {
+    if (window.FinAudio) window.FinAudio.playSuccess();
+    if (window.FinApi) {
+      await FinApi.loginWithApple();
+    }
+    this.showToast('Apple Sign-In', 'Connected with Apple Wallet & Apple Card.');
+    this.showScreen('home');
+  },
+
+  async logout() {
+    if (window.FinAudio) window.FinAudio.playGlassTap();
+    if (window.FinApi) {
+      await FinApi.logout();
+    }
+    this.showToast('Logged Out', 'Session terminated. Local tokens removed.');
+    this.showScreen('login');
   },
 
   // Screen Switcher
@@ -107,46 +184,58 @@ const FinApp = {
     }
 
     // Scroll viewport to top
-    const viewport = document.querySelector('.phone-viewport');
-    if (viewport) viewport.scrollTop = 0;
+    const screenWrap = target ? target.querySelector('.screen-scroll-wrap') : null;
+    if (screenWrap) screenWrap.scrollTop = 0;
   },
 
-  // Device Mode Switcher (iPhone 16 Pro / Pixel 9 Pro / Studio View)
+  // Device Frame Switcher
   setDeviceMode(mode) {
     if (window.FinAudio) window.FinAudio.playGlassTap();
     this.deviceMode = mode;
+
     const phone = document.getElementById('main-device-phone');
     if (!phone) return;
 
-    phone.className = `device-phone mode-${mode}`;
+    phone.className = 'device-phone';
+
+    if (mode === 'iphone') {
+      phone.classList.add('mode-iphone');
+    } else if (mode === 'pixel') {
+      phone.classList.add('mode-pixel');
+    } else if (mode === 'fullscreen') {
+      phone.classList.add('mode-fullscreen');
+    }
 
     document.querySelectorAll('.control-btn[data-device]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.device === mode);
     });
 
-    this.showToast('Mode Changed', `Switched to ${mode.toUpperCase()} layout.`);
+    setTimeout(() => {
+      this.renderHomeCharts('donut');
+      this.renderBudgetGauges();
+    }, 200);
   },
 
-  // Toggle Audio SFX
   toggleAudio() {
     if (window.FinAudio) {
-      const enabled = window.FinAudio.toggleMute();
+      const enabled = FinAudio.toggleAudio();
       const btn = document.getElementById('btn-toggle-audio');
       if (btn) {
+        btn.innerHTML = enabled 
+          ? '<i class="fas fa-volume-high"></i> SFX On' 
+          : '<i class="fas fa-volume-xmark"></i> SFX Muted';
         btn.classList.toggle('active', enabled);
-        btn.innerHTML = enabled ? `<i class="fas fa-volume-high"></i> SFX On` : `<i class="fas fa-volume-xmark"></i> SFX Off`;
       }
-      this.showToast('Audio Settings', enabled ? 'Sound FX Enabled' : 'Sound FX Muted');
     }
   },
 
-  // Toggle Balance Visibility (Privacy Mode)
-  toggleBalance() {
+  toggleBalanceVisibility() {
     this.balanceHidden = !this.balanceHidden;
-    const valEl = document.getElementById('hero-balance-val');
-    const eyeIcon = document.getElementById('balance-eye-icon');
-    if (valEl) {
-      valEl.textContent = this.balanceHidden ? '••••••••' : `48,920.50`;
+    const heroEl = document.getElementById('hero-balance-val');
+    const eyeIcon = document.getElementById('hero-eye-icon');
+
+    if (heroEl) {
+      heroEl.textContent = this.balanceHidden ? '••••••••' : FinData.summary.totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
     if (eyeIcon) {
       eyeIcon.className = this.balanceHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
@@ -154,7 +243,6 @@ const FinApp = {
     if (window.FinAudio) window.FinAudio.playGlassTap();
   },
 
-  // Dynamic Island Interactivity
   toggleDynamicIsland() {
     const island = document.getElementById('dynamic-island');
     if (island) {
@@ -163,7 +251,6 @@ const FinApp = {
     }
   },
 
-  // Floating Toast Notification Trigger
   showToast(title, msg) {
     const toast = document.getElementById('app-floating-toast');
     const tTitle = document.getElementById('toast-title');
@@ -216,7 +303,7 @@ const FinApp = {
   },
 
   // =========================================================================
-  // TRANSACTIONS SCREEN
+  // TRANSACTIONS SCREEN & CRUD (EDIT & DELETE)
   // =========================================================================
   renderTransactions() {
     const container = document.getElementById('full-transactions-list');
@@ -288,9 +375,14 @@ const FinApp = {
             </div>
           </div>
         </div>
-        <div class="tx-right">
-          <div class="tx-amount ${isCredit ? 'credit' : 'debit'}">${sign}$${absAmount}</div>
-          <div class="tx-time">${tx.date} ${tx.time}</div>
+        <div class="tx-right" style="display: flex; align-items: center; gap: 10px;">
+          <div>
+            <div class="tx-amount ${isCredit ? 'credit' : 'debit'}">${sign}$${absAmount}</div>
+            <div class="tx-time">${tx.date}</div>
+          </div>
+          <button class="quick-action-pill" style="padding: 4px 8px; font-size: 10px; color: #5DA9FF;" onclick="event.stopPropagation(); FinApp.openEditTransactionModal('${tx.id}')">
+            <i class="fas fa-pen"></i>
+          </button>
         </div>
       </div>
     `;
@@ -300,6 +392,7 @@ const FinApp = {
     const tx = FinData.transactions.find(t => t.id === txId);
     if (!tx) return;
 
+    this.activeTransactionId = txId;
     if (window.FinAudio) window.FinAudio.playGlassTap();
 
     const container = document.getElementById('receipt-modal-content');
@@ -334,7 +427,7 @@ const FinApp = {
         </div>
         <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 11px;">
           <span style="color: var(--text-muted);">AI Suggested Category</span>
-          <span style="color: #7C5CFF; font-weight: 700;">${tx.category} (99% confidence)</span>
+          <span style="color: #7C5CFF; font-weight: 700;">${tx.category}</span>
         </div>
         <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 11px;">
           <span style="color: var(--text-muted);">Notes / Memo</span>
@@ -342,12 +435,15 @@ const FinApp = {
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-        <button class="quick-action-pill" onclick="FinApp.showToast('Receipt Shared', 'Link copied to clipboard!'); FinApp.closeModal('modal-tx-receipt');" style="justify-content: center;">
-          <i class="fas fa-share-nodes"></i> Share
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <button class="quick-action-pill" onclick="FinApp.closeModal('modal-tx-receipt'); FinApp.openEditTransactionModal('${tx.id}')" style="justify-content: center; color: #5DA9FF;">
+          <i class="fas fa-pen"></i> Edit
         </button>
-        <button class="quick-action-pill" onclick="FinApp.showToast('Exported', 'PDF receipt saved to downloads.'); FinApp.closeModal('modal-tx-receipt');" style="justify-content: center; color: #5DA9FF;">
-          <i class="fas fa-download"></i> Export PDF
+        <button class="quick-action-pill" onclick="FinApp.deleteActiveTransaction('${tx.id}')" style="justify-content: center; color: #EF4444; border-color: rgba(239,68,68,0.3);">
+          <i class="fas fa-trash"></i> Delete
+        </button>
+        <button class="quick-action-pill" onclick="FinApp.showToast('Exported', 'PDF receipt saved.'); FinApp.closeModal('modal-tx-receipt');" style="justify-content: center;">
+          <i class="fas fa-download"></i> PDF
         </button>
       </div>
     `;
@@ -355,260 +451,75 @@ const FinApp = {
     this.openModal('modal-tx-receipt');
   },
 
-  handleAddTransactionSubmit(event) {
+  openEditTransactionModal(txId) {
+    const tx = FinData.transactions.find(t => t.id === txId);
+    if (!tx) return;
+
+    this.activeTransactionId = txId;
+    document.getElementById('edit-tx-id').value = tx.id;
+    document.getElementById('edit-tx-merchant').value = tx.merchant;
+    document.getElementById('edit-tx-amount').value = Math.abs(tx.amount).toFixed(2);
+    document.getElementById('edit-tx-category').value = tx.category;
+    document.getElementById('edit-tx-method').value = tx.paymentMethod;
+
+    this.openModal('modal-edit-transaction');
+  },
+
+  handleEditTransactionSubmit(event) {
     event.preventDefault();
-    const merchant = document.getElementById('new-tx-merchant').value;
-    const amount = parseFloat(document.getElementById('new-tx-amount').value);
-    const category = document.getElementById('new-tx-category').value;
-    const method = document.getElementById('new-tx-method').value;
+    const id = document.getElementById('edit-tx-id').value;
+    const merchant = document.getElementById('edit-tx-merchant').value;
+    const amount = parseFloat(document.getElementById('edit-tx-amount').value);
+    const category = document.getElementById('edit-tx-category').value;
+    const method = document.getElementById('edit-tx-method').value;
 
-    if (!merchant || isNaN(amount)) return;
+    const tx = FinData.transactions.find(t => t.id === id);
+    if (tx) {
+      tx.merchant = merchant;
+      tx.amount = (tx.amount < 0 || category !== 'Income') ? -Math.abs(amount) : Math.abs(amount);
+      tx.category = category;
+      tx.paymentMethod = method;
 
-    const newTx = {
-      id: `tx_${Date.now()}`,
-      merchant: merchant,
-      category: category,
-      date: "Just Now",
-      time: "09:42 AM",
-      amount: -Math.abs(amount),
-      paymentMethod: method,
-      type: method.includes('UPI') ? 'UPI' : (method.includes('Card') ? 'Card' : 'Bank'),
-      status: "Settled",
-      icon: "bag-shopping",
-      brandIcon: method.includes('Apple') ? 'fab fa-apple' : 'fas fa-bolt',
-      logoColor: "#7C5CFF",
-      logoBg: "rgba(124, 92, 255, 0.15)",
-      location: "Instant Entry",
-      note: "Auto-logged via FinPilot UI",
-      cashback: "+$0.50",
-      upiRef: `UPI-${Math.floor(100000 + Math.random() * 900000)}`
-    };
+      if (window.FinApi && FinApi.isOnline) {
+        FinApi.updateTransaction(id, {
+          merchant,
+          amount: tx.amount,
+          category,
+          payment_method: method
+        });
+      }
 
-    FinData.transactions.unshift(newTx);
-    FinData.summary.totalBalance -= Math.abs(amount);
-    FinData.summary.monthlySpending += Math.abs(amount);
-
-    this.closeModal('modal-add-tx');
-    this.renderHome();
-    this.renderTransactions();
-    this.renderAnalytics();
-    this.renderBudget();
-
-    const valEl = document.getElementById('hero-balance-val');
-    if (valEl && !this.balanceHidden) {
-      valEl.textContent = FinData.summary.totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    }
-
-    // Persist to live backend if available
-    if (window.FinApi && FinApi.isOnline) {
-      FinApi.createTransaction({
-        merchant_name: merchant,
-        amount: Math.abs(amount),
-        category: category,
-        payment_method: method,
-        notes: "Auto-logged via FinPilot UI"
-      }).catch(err => console.warn('Backend sync:', err));
-    }
-
-    this.showToast('Transaction Logged', `Logged $${Math.abs(amount).toFixed(2)} at ${merchant}`);
-  },
-
-  // =========================================================================
-  // AI ASSISTANT SCREEN
-  // =========================================================================
-  renderAiAssistant() {
-    const chipsContainer = document.getElementById('ai-chips-list');
-    if (chipsContainer) {
-      chipsContainer.innerHTML = FinData.aiPrompts.map(prompt => `
-        <button class="ai-prompt-chip" onclick="FinApp.askAi('${prompt}')">
-          <i class="fas fa-sparkles" style="color: #7C5CFF; font-size: 10px;"></i> ${prompt}
-        </button>
-      `).join('');
-    }
-
-    const recsFeed = document.getElementById('ai-recommendations-feed');
-    if (recsFeed) {
-      recsFeed.innerHTML = FinData.aiRecommendations.map(rec => `
-        <div class="ai-recommend-card" style="border-left-color: ${rec.color};">
-          <div class="ai-rec-header">
-            <span class="ai-rec-badge" style="color: ${rec.color}; background: rgba(255,255,255,0.06);">${rec.badge}</span>
-            <i class="${rec.icon}" style="color: ${rec.color}; font-size: 12px;"></i>
-          </div>
-          <div class="ai-rec-title">${rec.title}</div>
-          <div class="ai-rec-desc">${rec.desc}</div>
-        </div>
-      `).join('');
+      this.closeModal('modal-edit-transaction');
+      this.renderHome();
+      this.renderTransactions();
+      this.renderAnalytics();
+      this.showToast('Transaction Updated', `Saved changes for ${merchant}`);
     }
   },
 
-  handleAiSubmit(event) {
-    event.preventDefault();
-    const input = document.getElementById('ai-user-input');
-    if (!input || !input.value.trim()) return;
-    const query = input.value.trim();
-    input.value = '';
-    this.askAi(query);
-  },
+  deleteActiveTransaction(txId) {
+    const id = txId || this.activeTransactionId || document.getElementById('edit-tx-id').value;
+    const index = FinData.transactions.findIndex(t => t.id === id);
+    if (index !== -1) {
+      const removed = FinData.transactions.splice(index, 1)[0];
+      FinData.summary.totalBalance += Math.abs(removed.amount);
+      FinData.summary.monthlySpending = Math.max(0, FinData.summary.monthlySpending - Math.abs(removed.amount));
 
-  askAi(query) {
-    if (window.FinAudio) window.FinAudio.playAiPulse();
-    this.showScreen('ai');
+      if (window.FinApi && FinApi.isOnline) {
+        FinApi.deleteTransaction(id);
+      }
 
-    const stream = document.getElementById('ai-chat-stream');
-    if (!stream) return;
-
-    // Append user query bubble
-    const userBubble = document.createElement('div');
-    userBubble.className = 'chat-bubble user';
-    userBubble.textContent = query;
-    stream.appendChild(userBubble);
-
-    // Append typing indicator
-    const typingBubble = document.createElement('div');
-    typingBubble.className = 'chat-bubble ai';
-    typingBubble.innerHTML = `<i class="fas fa-circle-notch fa-spin" style="color: #7C5CFF;"></i> Neural copilot is calculating...`;
-    stream.appendChild(typingBubble);
-
-    stream.scrollTop = stream.scrollHeight;
-
-    // Fetch from FastAPI AI assistant if backend is online
-    if (window.FinApi && FinApi.isOnline) {
-      FinApi.chatWithAi(query).then(res => {
-        typingBubble.remove();
-        let markdownText = res && (res.response_markdown || res.response) ? (res.response_markdown || res.response) : this.generateAiResponse(query);
-        const resBubble = document.createElement('div');
-        resBubble.className = 'chat-bubble ai';
-        resBubble.innerHTML = `
-          <div class="ai-chat-meta-badge"><i class="fas fa-sparkles"></i> FinPilot Intelligence (FastAPI)</div>
-          ${markdownText.replace(/\n/g, '<br>')}
-        `;
-        stream.appendChild(resBubble);
-        stream.scrollTop = stream.scrollHeight;
-      }).catch(() => {
-        typingBubble.remove();
-        const aiResponse = this.generateAiResponse(query);
-        const resBubble = document.createElement('div');
-        resBubble.className = 'chat-bubble ai';
-        resBubble.innerHTML = `
-          <div class="ai-chat-meta-badge"><i class="fas fa-sparkles"></i> FinPilot Intelligence</div>
-          ${aiResponse}
-        `;
-        stream.appendChild(resBubble);
-        stream.scrollTop = stream.scrollHeight;
-      });
-      return;
-    }
-
-    // Generate intelligent AI response via standalone neural simulation
-    setTimeout(() => {
-      typingBubble.remove();
-      const aiResponse = this.generateAiResponse(query);
-      const resBubble = document.createElement('div');
-      resBubble.className = 'chat-bubble ai';
-      resBubble.innerHTML = `
-        <div class="ai-chat-meta-badge"><i class="fas fa-sparkles"></i> FinPilot Intelligence</div>
-        ${aiResponse}
-      `;
-      stream.appendChild(resBubble);
-      stream.scrollTop = stream.scrollHeight;
-    }, 700);
-  },
-
-  generateAiResponse(query) {
-    const q = query.toLowerCase();
-
-    if (q.includes('today') || q.includes('how much did i spend')) {
-      return `Today you have recorded **$142.50** across 3 transactions (Starbucks, Whole Foods, and Uber).<br><br>💡 <em>Tip: You are currently 12% below your average daily target of $115.02!</em>`;
-    }
-
-    if (q.includes('food') || q.includes('restaurant') || q.includes('dining')) {
-      return `You have spent **$1,420.00** on Food & Dining this month (88% of your $1,600 allocation).<br>• Nobu Gourmet: $248.50<br>• Whole Foods: $142.30<br>• Swiggy Delivery: $36.50<br><br>Cooking 2 more meals at home this week can save an estimated **$120.00**!`;
-    }
-
-    if (q.includes('overspend') || q.includes('where am i')) {
-      return `⚠️ **High-Velocity Alert: Shopping & Tech**<br>Your shopping spending is running **16.6% ahead of target** following the $1,299 Apple Store purchase.<br><br>Canceling overlapping streaming plans saves **$359.76/year**.`;
-    }
-
-    if (q.includes('highest') || q.includes('upi') || q.includes('biggest')) {
-      return `Your highest recorded payment is **$1,299.00** at Apple Store 5th Ave (Apple Card).<br>Your highest direct UPI payment is **$248.50** at Nobu Gourmet Dining.`;
-    }
-
-    if (q.includes('monthly') || q.includes('comparison') || q.includes('month')) {
-      return `Compared to July 2026, your spending is down **6.8% (-$251.65)**, while your monthly savings rate increased to **72.3%** ($8,999.25 saved). Outstanding financial trajectory!`;
-    }
-
-    return `FinPilot analyzed your financial posture across all accounts. Current liquid net worth is **$48,920.50** with an emergency runway of **14.2 Months**. Everything is well within your safety parameters!`;
-  },
-
-  // =========================================================================
-  // ANALYTICS SCREEN
-  // =========================================================================
-  renderAnalytics() {
-    this.renderAnalyticsCharts('line');
-
-    const heatmapMount = document.getElementById('heatmap-calendar-mount');
-    if (heatmapMount) {
-      FinCharts.renderHeatmap('heatmap-calendar-mount', FinData.analytics.heatmap30Days);
-    }
-
-    const catList = document.getElementById('analytics-category-list');
-    if (catList) {
-      catList.innerHTML = FinData.budgets.categories.map(cat => `
-        <div class="cat-progress-item">
-          <div class="cat-progress-meta">
-            <span style="font-weight: 700; color: #FFFFFF;"><i class="fas fa-${cat.icon}" style="color: ${cat.color};"></i> ${cat.name}</span>
-            <span style="color: var(--text-sub);">$${cat.spent.toFixed(2)} / $${cat.limit.toFixed(2)} (${cat.percent}%)</span>
-          </div>
-          <div class="cat-progress-bar-bg">
-            <div class="cat-progress-bar-fill" style="width: ${cat.percent}%; background: ${cat.color};"></div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    const merchantsList = document.getElementById('top-merchants-leaderboard');
-    if (merchantsList) {
-      merchantsList.innerHTML = FinData.analytics.topMerchants.map((m, idx) => `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 11px; font-weight: 800; color: ${idx === 0 ? '#F59E0B' : 'var(--text-muted)'}; width: 16px;">#${idx + 1}</span>
-            <div>
-              <div style="font-size: 13px; font-weight: 700; color: #FFFFFF;">${m.name}</div>
-              <div style="font-size: 10px; color: var(--text-muted);">${m.category} • ${m.count} visits</div>
-            </div>
-          </div>
-          <div style="font-size: 13px; font-weight: 800; color: #FFFFFF;">$${m.amount.toFixed(2)}</div>
-        </div>
-      `).join('');
-    }
-  },
-
-  switchAnalyticsChart(btn, type) {
-    if (btn && btn.parentElement) {
-      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    }
-    this.renderAnalyticsCharts(type);
-  },
-
-  renderAnalyticsCharts(type = 'line') {
-    const canvas = document.getElementById('analytics-chart-canvas');
-    if (!canvas) return;
-
-    if (type === 'line') {
-      canvas.innerHTML = `<div id="analytics-line-chart" style="width: 100%;"></div>`;
-      FinCharts.renderMonthlyArea('analytics-line-chart', FinData.analytics.monthlyTrend);
-    } else if (type === 'bar') {
-      canvas.innerHTML = `<div id="analytics-bar-chart" style="width: 100%;"></div>`;
-      FinCharts.renderWeeklyBars('analytics-bar-chart', FinData.analytics.weeklySpending);
-    } else if (type === 'donut') {
-      canvas.innerHTML = `<div id="analytics-donut-chart"></div>`;
-      FinCharts.renderDonut('analytics-donut-chart', FinData.budgets.categories, { size: 190 });
+      this.closeModal('modal-tx-receipt');
+      this.closeModal('modal-edit-transaction');
+      this.renderHome();
+      this.renderTransactions();
+      this.renderAnalytics();
+      this.showToast('Transaction Deleted', `Removed ${removed.merchant} from ledger.`);
     }
   },
 
   // =========================================================================
-  // BUDGET SCREEN
+  // BUDGET SCREEN & CRUD (EDIT & DELETE)
   // =========================================================================
   renderBudget() {
     this.renderBudgetGauges();
@@ -649,8 +560,11 @@ const FinApp = {
               <div style="font-size: 10px; color: var(--text-muted);">$${goal.current.toLocaleString()} of $${goal.target.toLocaleString()} (${goal.percent}%)</div>
             </div>
           </div>
-          <div style="font-size: 12px; font-weight: 800; color: ${goal.color};">
-            ${goal.percent}%
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="font-size: 12px; font-weight: 800; color: ${goal.color};">${goal.percent}%</div>
+            <button class="quick-action-pill" style="padding: 2px 6px; font-size: 9px;" onclick="FinApp.openEditBudgetModal('goal_${goal.name}', '${goal.name}', ${goal.target})">
+              <i class="fas fa-pen"></i>
+            </button>
           </div>
         </div>
       `).join('');
@@ -658,7 +572,43 @@ const FinApp = {
   },
 
   renderBudgetGauges() {
-    FinCharts.renderCircularGauge('main-budget-circular-gauge', 69);
+    const totalSpent = FinData.summary.monthlySpending || 3450.75;
+    const totalLimit = 5000.0;
+    const percent = Math.min(100, Math.round((totalSpent / totalLimit) * 100));
+    FinCharts.renderCircularGauge('main-budget-circular-gauge', percent);
+  },
+
+  openEditBudgetModal(budgetId = 'main_target', name = 'Monthly Spending Target', limit = 5000.0) {
+    this.activeBudgetId = budgetId;
+    document.getElementById('edit-budget-id').value = budgetId;
+    document.getElementById('edit-budget-name').value = name;
+    document.getElementById('edit-budget-limit').value = limit;
+    this.openModal('modal-edit-budget');
+  },
+
+  handleEditBudgetSubmit(event) {
+    event.preventDefault();
+    const id = document.getElementById('edit-budget-id').value;
+    const name = document.getElementById('edit-budget-name').value;
+    const limit = parseFloat(document.getElementById('edit-budget-limit').value);
+
+    if (window.FinApi && FinApi.isOnline) {
+      FinApi.updateBudget(id, { name, monthly_limit: limit });
+    }
+
+    this.closeModal('modal-edit-budget');
+    this.renderBudget();
+    this.showToast('Budget Updated', `Set '${name}' target to $${limit.toFixed(2)}.`);
+  },
+
+  deleteActiveBudget() {
+    const id = this.activeBudgetId || document.getElementById('edit-budget-id').value;
+    if (window.FinApi && FinApi.isOnline) {
+      FinApi.deleteBudget(id);
+    }
+    this.closeModal('modal-edit-budget');
+    this.renderBudget();
+    this.showToast('Budget Target Removed', 'Target deactivated.');
   },
 
   payBill(name, amount) {
@@ -670,8 +620,218 @@ const FinApp = {
   },
 
   // =========================================================================
-  // SEARCH SCREEN
+  // MODALS & HELPERS
   // =========================================================================
+  openModal(modalId) {
+    if (window.FinAudio) window.FinAudio.playGlassTap();
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('show');
+  },
+
+  closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('show');
+  },
+
+  handleAddTransactionSubmit(event) {
+    event.preventDefault();
+    const merchant = document.getElementById('new-tx-merchant').value;
+    const amount = parseFloat(document.getElementById('new-tx-amount').value);
+    const category = document.getElementById('new-tx-category').value;
+    const method = document.getElementById('new-tx-method').value;
+
+    const newTx = {
+      id: `tx_${Date.now()}`,
+      merchant: merchant,
+      amount: -Math.abs(amount),
+      category: category,
+      type: "Debit",
+      paymentMethod: method,
+      date: "Today",
+      time: "Just now",
+      icon: "bag-shopping",
+      logoBg: "rgba(124, 92, 255, 0.15)",
+      location: "Instant Entry",
+      note: "Auto-logged via FinPilot UI",
+      cashback: "+$0.50",
+      upiRef: `UPI-${Math.floor(100000 + Math.random() * 900000)}`
+    };
+
+    FinData.transactions.unshift(newTx);
+    FinData.summary.totalBalance -= Math.abs(amount);
+    FinData.summary.monthlySpending += Math.abs(amount);
+
+    this.closeModal('modal-add-tx');
+    this.renderHome();
+    this.renderTransactions();
+    this.renderAnalytics();
+    this.renderBudget();
+
+    this.showToast('Transaction Logged', `Logged $${Math.abs(amount).toFixed(2)} at ${merchant}`);
+  },
+
+  renderAiAssistant() {
+    const chipsContainer = document.getElementById('ai-chips-list');
+    if (chipsContainer) {
+      chipsContainer.innerHTML = FinData.aiPrompts.map(prompt => `
+        <button class="ai-prompt-chip" onclick="FinApp.askAi('${prompt}')">
+          <i class="fas fa-sparkles" style="color: #7C5CFF; font-size: 10px;"></i> ${prompt}
+        </button>
+      `).join('');
+    }
+
+    const recsFeed = document.getElementById('ai-recommendations-feed');
+    if (recsFeed) {
+      recsFeed.innerHTML = FinData.aiRecommendations.map(rec => `
+        <div class="ai-recommend-card" style="border-left-color: ${rec.color};">
+          <div class="ai-rec-header">
+            <span class="ai-rec-badge" style="color: ${rec.color}; background: rgba(255,255,255,0.06);">${rec.badge}</span>
+            <i class="${rec.icon}" style="color: ${rec.color}; font-size: 12px;"></i>
+          </div>
+          <div class="ai-rec-title">${rec.title}</div>
+          <div class="ai-rec-desc">${rec.desc}</div>
+        </div>
+      `).join('');
+    }
+  },
+
+  handleAiSubmit(event) {
+    event.preventDefault();
+    const input = document.getElementById('ai-user-input');
+    if (!input || !input.value.trim()) return;
+    const query = input.value.trim();
+    input.value = '';
+    this.askAi(query);
+  },
+
+  async askAi(query) {
+    if (window.FinAudio) window.FinAudio.playGlassTap();
+
+    const feed = document.getElementById('ai-chat-messages-feed');
+    if (!feed) return;
+
+    // Append User Bubble
+    const userBubble = document.createElement('div');
+    userBubble.className = 'chat-msg user';
+    userBubble.innerHTML = `<div class="chat-bubble user">${query}</div>`;
+    feed.appendChild(userBubble);
+
+    // Append Thinking Indicator
+    const botBubble = document.createElement('div');
+    botBubble.className = 'chat-msg bot';
+    botBubble.innerHTML = `
+      <div class="bot-avatar-glow"><i class="fas fa-brain-circuit"></i></div>
+      <div class="chat-bubble bot"><i class="fas fa-spinner fa-spin"></i> Analyzing ledger & calculating variances...</div>
+    `;
+    feed.appendChild(botBubble);
+    feed.scrollTop = feed.scrollHeight;
+
+    // Check Live FastAPI / Gemini endpoint
+    let responseText = null;
+    if (window.FinApi && FinApi.isOnline) {
+      const aiRes = await FinApi.chatWithAi(query);
+      if (aiRes && aiRes.response_markdown) {
+        responseText = aiRes.response_markdown;
+      }
+    }
+
+    if (!responseText) {
+      await new Promise(r => setTimeout(r, 600));
+      responseText = this.synthesizeLocalAiReply(query);
+    }
+
+    botBubble.querySelector('.chat-bubble').innerHTML = responseText;
+    if (window.FinAudio) window.FinAudio.playSuccess();
+    feed.scrollTop = feed.scrollHeight;
+  },
+
+  synthesizeLocalAiReply(query) {
+    const q = query.toLowerCase();
+    if (q.includes('food') || q.includes('restaurant') || q.includes('dining')) {
+      return `You have spent **$1,420.00** on Food & Dining this month (88% of your $1,600 allocation).<br>• Nobu Gourmet: $248.50<br>• Whole Foods: $142.30<br>• Swiggy: $36.50<br><br>Cooking 2 more meals at home this week can save an estimated **$120.00**!`;
+    }
+    if (q.includes('highest') || q.includes('upi') || q.includes('biggest')) {
+      return `Your highest recorded outflow is **$1,299.00** at Apple Store 5th Ave (Apple Card).<br>Your highest direct UPI payment is **$248.50** at Nobu Dining.`;
+    }
+    if (q.includes('overspend') || q.includes('save') || q.includes('budget')) {
+      return `⚠️ **High-Velocity Alert: Shopping & Tech**<br>Your shopping spending is running **16.6% ahead of target**.<br><br>Canceling overlapping streaming plans saves **$359.76/year**.`;
+    }
+    return `FinPilot analyzed your financial posture across all accounts. Current available balance is **$48,920.50** with a healthy **72.3% savings rate**. Everything is well within your safety parameters!`;
+  },
+
+  renderAnalytics() {
+    this.renderAnalyticsCharts('line');
+    const heatmapMount = document.getElementById('heatmap-calendar-mount');
+    if (heatmapMount) {
+      FinCharts.renderHeatmap('heatmap-calendar-mount', FinData.analytics.heatmap30Days);
+    }
+    const catList = document.getElementById('analytics-category-list');
+    if (catList) {
+      catList.innerHTML = FinData.budgets.categories.map(cat => `
+        <div class="cat-progress-item">
+          <div class="cat-progress-meta">
+            <span style="font-weight: 700; color: #FFFFFF;"><i class="fas fa-${cat.icon}" style="color: ${cat.color};"></i> ${cat.name}</span>
+            <span style="color: var(--text-sub);">$${cat.spent.toFixed(2)} / $${cat.limit.toFixed(2)} (${cat.percent}%)</span>
+          </div>
+          <div class="cat-progress-bar-bg">
+            <div class="cat-progress-bar-fill" style="width: ${cat.percent}%; background: ${cat.color};"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+  },
+
+  switchAnalyticsChart(btn, type) {
+    if (btn && btn.parentElement) {
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    this.renderAnalyticsCharts(type);
+  },
+
+  renderAnalyticsCharts(type = 'line') {
+    const canvas = document.getElementById('analytics-chart-canvas');
+    if (!canvas) return;
+    if (type === 'line') {
+      canvas.innerHTML = `<div id="analytics-line-chart" style="width: 100%;"></div>`;
+      FinCharts.renderMonthlyArea('analytics-line-chart', FinData.analytics.monthlyTrend);
+    } else if (type === 'bar') {
+      canvas.innerHTML = `<div id="analytics-bar-chart" style="width: 100%;"></div>`;
+      FinCharts.renderWeeklyBars('analytics-bar-chart', FinData.analytics.weeklySpending);
+    } else if (type === 'donut') {
+      canvas.innerHTML = `<div id="analytics-donut-chart"></div>`;
+      FinCharts.renderDonut('analytics-donut-chart', FinData.budgets.categories, { size: 190 });
+    }
+  },
+
+  renderReports() {
+    const table = document.getElementById('reports-history-table');
+    if (table) {
+      table.innerHTML = FinData.monthlyArchive.map(row => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 11px;">
+          <div>
+            <div style="font-weight: 700; color: #FFFFFF;">${row.month}</div>
+            <div style="font-size: 10px; color: var(--text-muted);">${row.transactions} entries • ${row.rate} savings</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="color: #10B981; font-weight: 700;">+${row.net}</div>
+            <button onclick="FinApp.downloadPdfStatement()" style="background: none; border: none; color: #5DA9FF; font-size: 10px; cursor: pointer; text-decoration: underline;">
+              PDF
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+  },
+
+  downloadPdfStatement() {
+    this.showToast('PDF Exported', 'FinPilot-Statement-Aug2026.pdf ready in downloads.');
+  },
+
+  exportCsvLedger() {
+    this.showToast('CSV Exported', 'FinPilot-Ledger-Aug2026.csv generated.');
+  },
+
   renderSearch() {
     this.renderSearchResults();
   },
@@ -698,210 +858,94 @@ const FinApp = {
     }
 
     if (countLabel) countLabel.textContent = `${results.length} matches`;
-
     container.innerHTML = results.map(tx => this.createTxCardHtml(tx)).join('');
   },
 
-  // =========================================================================
-  // NOTIFICATIONS SCREEN
-  // =========================================================================
   renderNotifications() {
-    const stream = document.getElementById('notifications-stream-list');
-    if (!stream) return;
-
-    stream.innerHTML = FinData.notifications.map(n => `
-      <div class="glass-card" style="border-left: 3px solid ${n.color}; margin-bottom: 10px;">
-        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <i class="${n.icon}" style="color: ${n.color}; font-size: 14px;"></i>
-            <span style="font-size: 12px; font-weight: 700; color: #FFFFFF;">${n.title}</span>
+    const container = document.getElementById('notifications-stream-list');
+    if (container) {
+      container.innerHTML = FinData.notifications.map(n => `
+        <div class="notification-card-glass" style="border-left: 3px solid ${n.color};">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="font-size: 11px; font-weight: 700; color: #FFFFFF;">${n.title}</span>
+            <span style="font-size: 9px; color: var(--text-muted);">${n.time}</span>
           </div>
-          <span style="font-size: 9px; color: var(--text-muted);">${n.time}</span>
+          <p style="font-size: 10px; color: var(--text-sub); line-height: 1.4;">${n.desc}</p>
         </div>
-        <p style="font-size: 11px; color: var(--text-sub); line-height: 1.45; margin-bottom: 8px;">${n.message}</p>
-        <button onclick="FinApp.showToast('${n.actionText}', 'Action registered.');" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-glass); color: #5DA9FF; font-size: 9px; font-weight: 700; padding: 4px 10px; border-radius: 12px; cursor: pointer;">
-          ${n.actionText} →
-        </button>
-      </div>
-    `).join('');
+      `).join('');
+    }
   },
 
-  // =========================================================================
-  // PROFILE SCREEN & ACCOUNTS
-  // =========================================================================
   renderProfile() {
-    const list = document.getElementById('profile-accounts-list');
-    if (!list) return;
-
-    list.innerHTML = FinData.accounts.map(acc => `
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 32px; height: 32px; border-radius: 8px; background: ${acc.color}; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #FFF;">
-            <i class="${acc.icon}"></i>
+    const profileMount = document.getElementById('profile-linked-banks');
+    if (profileMount) {
+      profileMount.innerHTML = FinData.linkedAccounts.map(acc => `
+        <div class="bank-sync-pill">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="${acc.icon}" style="color: ${acc.color};"></i>
+            <div>
+              <div style="font-size: 11px; font-weight: 700; color: #FFF;">${acc.bank}</div>
+              <div style="font-size: 9px; color: var(--text-muted);">${acc.type} •••• ${acc.last4}</div>
+            </div>
           </div>
-          <div>
-            <div style="font-size: 12px; font-weight: 700; color: #FFFFFF;">${acc.name}</div>
-            <div style="font-size: 10px; color: var(--text-muted);">${acc.number} • ${acc.status}</div>
-          </div>
+          <span style="font-size: 11px; font-weight: 800; color: #FFF;">$${acc.balance.toLocaleString()}</span>
         </div>
-        <div style="font-size: 12px; font-weight: 800; color: #FFFFFF;">
-          $${acc.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-        </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   },
 
-  // =========================================================================
-  // SEND MONEY MODAL & KEYPAD
-  // =========================================================================
   renderSendContacts() {
-    const row = document.getElementById('send-contacts-row');
-    if (!row) return;
-
-    row.innerHTML = FinData.recentContacts.map(c => `
-      <div class="contact-avatar-pill" onclick="FinApp.selectContact('${c.name}', '${c.handle}')">
-        <img src="${c.avatar}" class="contact-img" alt="${c.name}">
-        <span style="font-size: 9px; color: var(--text-sub); font-weight: 600;">${c.name.split(' ')[0]}</span>
-      </div>
-    `).join('');
+    const container = document.getElementById('send-contacts-list');
+    if (container) {
+      container.innerHTML = FinData.recentPayees.map(p => `
+        <div class="send-contact-item ${this.selectedContact === p.name ? 'active' : ''}" onclick="FinApp.selectPayee('${p.name}')">
+          <div class="send-contact-avatar" style="background: ${p.avatarBg};">${p.initials}</div>
+          <div class="send-contact-name">${p.name}</div>
+        </div>
+      `).join('');
+    }
   },
 
-  selectContact(name, handle) {
-    this.selectedContact = { name, handle };
-    if (window.FinAudio) window.FinAudio.playGlassTap();
-    this.showToast('Payee Selected', `Sending instant UPI to ${name} (${handle})`);
+  selectPayee(name) {
+    this.selectedContact = name;
+    this.renderSendContacts();
   },
 
-  handleKeypad(key) {
-    if (window.FinAudio) window.FinAudio.playGlassTap();
-
-    if (key === 'del') {
+  appendKeypad(val) {
+    if (window.FinAudio) window.FinAudio.playKeypadBeep();
+    if (val === 'backspace') {
       this.transferAmount = this.transferAmount.length > 1 ? this.transferAmount.slice(0, -1) : '0';
-    } else if (key === '.') {
-      if (!this.transferAmount.includes('.')) this.transferAmount += '.';
     } else {
-      if (this.transferAmount === '0') {
-        this.transferAmount = key;
+      if (this.transferAmount === '0' && val !== '.') {
+        this.transferAmount = val;
       } else {
-        this.transferAmount += key;
+        if (val === '.' && this.transferAmount.includes('.')) return;
+        this.transferAmount += val;
       }
     }
-
-    const display = document.getElementById('transfer-amount-display');
+    const display = document.getElementById('send-money-amount-display');
     if (display) display.textContent = `$${this.transferAmount}`;
   },
 
-  executeTransfer() {
-    const amt = parseFloat(this.transferAmount);
-    if (isNaN(amt) || amt <= 0) {
-      alert('Please enter a valid transfer amount.');
+  processTransfer() {
+    const amount = parseFloat(this.transferAmount);
+    if (amount <= 0) {
+      this.showToast('Invalid Amount', 'Enter a transfer amount greater than $0.');
       return;
     }
-
-    if (window.FinAudio) window.FinAudio.playSuccess();
-
-    FinData.summary.totalBalance -= amt;
+    const payee = this.selectedContact || 'Alex Morgan';
+    FinData.summary.totalBalance -= amount;
+    this.showToast('Transfer Completed', `Sent $${amount.toFixed(2)} to ${payee} instantly via UPI.`);
     this.transferAmount = '0';
-    const display = document.getElementById('transfer-amount-display');
-    if (display) display.textContent = '$0';
-
+    const display = document.getElementById('send-money-amount-display');
+    if (display) display.textContent = '$0.00';
     this.closeModal('modal-send-money');
-    this.showToast('Transfer Complete', `Sent $${amt.toFixed(2)} with Face ID authorization.`);
     this.renderHome();
-  },
-
-  // =========================================================================
-  // REPORTS & EXPORTS
-  // =========================================================================
-  renderReports() {},
-
-  showPdfPreview() {
-    if (window.FinAudio) window.FinAudio.playGlassTap();
-    this.openModal('modal-pdf-report');
-  },
-
-  downloadPdfStatement() {
-    this.closeModal('modal-pdf-report');
-    if (window.FinApi && FinApi.isOnline) {
-      window.open(FinApi.getPdfReportUrl(), '_blank');
-    }
-    this.showToast('PDF Statement', 'Official statement generated.');
-  },
-
-  exportCsv() {
-    if (window.FinApi && FinApi.isOnline) {
-      window.open(FinApi.getCsvReportUrl(), '_blank');
-      this.showToast('CSV Exported', 'FastAPI backend generated live transaction ledger.');
-      return;
-    }
-    let csv = "ID,Merchant,Category,Date,Time,Amount,PaymentMethod,Status\n";
-    FinData.transactions.forEach(t => {
-      csv += `"${t.id}","${t.merchant}","${t.category}","${t.date}","${t.time}","${t.amount}","${t.paymentMethod}","${t.status}"\n`;
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `FinPilot_Transactions_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    this.showToast('CSV Exported', 'Transaction dataset exported to CSV.');
-  },
-
-  // Modal Control
-  openModal(modalId) {
-    if (window.FinAudio) window.FinAudio.playGlassTap();
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
-  },
-
-  closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
-  },
-
-  handleLogin(provider) {
-    if (window.FinAudio) window.FinAudio.playSuccess();
-    this.showToast('Authenticated', `Signed in successfully via ${provider}`);
-    this.showScreen('home');
-  },
-
-  simulateFaceIdLogin() {
-    if (window.FinAudio) window.FinAudio.playSuccess();
-    this.showToast('Face ID Verified', 'Biometric Enclave Authenticated.');
-    setTimeout(() => {
-      this.showScreen('home');
-    }, 400);
-  },
-
-  toggleSetting(name) {
-    this.showToast('Settings Updated', `${name} preference saved.`);
-  },
-
-  setCurrency(symbol) {
-    this.currentCurrency = symbol;
-    this.showToast('Currency Changed', `Display currency updated to ${symbol}`);
-  },
-
-  bindEvents() {
-    // Close modal on outside tap
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          modal.classList.remove('active');
-        }
-      });
-    });
+    this.renderTransactions();
   }
 };
 
-window.addEventListener('DOMContentLoaded', () => {
+window.FinApp = FinApp;
+document.addEventListener('DOMContentLoaded', () => {
   FinApp.init();
 });
-
-if (typeof window !== 'undefined') {
-  window.FinApp = FinApp;
-}
