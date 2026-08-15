@@ -11,7 +11,7 @@ from app.database.session import get_db
 from app.models.user import User
 from app.models.transaction import Transaction
 from app.schemas.transaction import (
-    TransactionCreate, TransactionResponse, TransactionFilter,
+    TransactionCreate, TransactionUpdate, TransactionResponse, TransactionFilter,
     SMSIngestRequest, NotificationIngestRequest, EmailIngestRequest, IngestionResponse
 )
 from app.repositories.transaction_repo import TransactionRepository
